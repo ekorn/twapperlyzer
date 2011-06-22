@@ -1,0 +1,196 @@
+﻿<!doctype html>
+<!-- Conditional comment for mobile ie7 http://blogs.msdn.com/b/iemobile/ -->
+<!-- Appcache Facts http://appcachefacts.info/ -->
+<!--[if IEMobile 7 ]>    <html class="no-js iem7" manifest="default.appcache?v=1"> <![endif]-->
+<!--[if (gt IEMobile 7)|!(IEMobile)]><!--> <html class="no-js" manifest="default.appcache?v=1"> <!--<![endif]-->
+
+<head>
+  <meta charset="utf-8">
+
+  <title></title>
+  <meta name="description" content="A Software to analyse #Tag Communitys">
+  <meta name="author" content="Nicolas Lehmann">
+  
+  <!-- Mobile viewport optimization http://goo.gl/b9SaQ -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Home screen icon  Mathias Bynens http://goo.gl/6nVq0 -->
+  <!-- For iPhone 4 with high-resolution Retina display: -->
+  <link rel="apple-touch-icon-precomposed" sizes="114x114" href="img/h/apple-touch-icon.png">
+  <!-- For first-generation iPad: -->
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="img/m/apple-touch-icon.png">
+  <!-- For non-Retina iPhone, iPod Touch, and Android 2.1+ devices: -->
+  <link rel="apple-touch-icon-precomposed" href="img/l/apple-touch-icon-precomposed.png">
+  <!-- For nokia devices: -->
+  <link rel="shortcut icon" href="img/l/apple-touch-icon.png">
+  
+  <!--iOS web app, deletable if not needed -->
+  <!--<meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-startup-image" href="img/l/splash.png">-->
+  
+  <!-- Mobile IE allows us to activate ClearType technology for smoothing fonts for easy reading -->
+  <meta http-equiv="cleartype" content="on">
+	
+	<!-- more tags for your 'head' to consider https://gist.github.com/849231 -->
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/style.css?v=1"> 
+   <link rel="stylesheet" href="css/jquery.mobile-1.0b1.min.css" type="text/css" media="screen" charset="utf-8" /> 
+<!--<link rel="stylesheet" href="http://code.jquery.com/mobile/latest/jquery.mobile.min.css" type="text/css" media="screen" charset="utf-8" />-->
+ 
+  <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
+  <script src="js/libs/modernizr-custom.js"></script>
+</head>
+
+<body>
+
+<div data-role="page" id="welcomePage">
+ 
+  <div data-role="header">
+    <h1>twapperlyzer</h1>
+    <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
+  </div>
+ 
+  <div data-role="content">
+    <form id="hashtagForm" action="#" method="get">
+      <div data-role="fieldcontain">
+        <label for="hashtagField">Archive ID:</label>
+        <input id="hashtagField" type="text" name="hashtagField" />
+      </div>
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+  <p><center><strong>or</strong></center></p>
+ <button type="submit" data-icon="grid" id="listHashtagsButton">List Hashtag Archives </button>
+  <div data-role="footer">
+    <h4>Page Footer</h4>
+  </div>
+</div>
+
+<div data-role="page" id="optionsPage">
+ 
+  <div data-role="header">
+    <h1>twapperlyzer</h1>
+    <a href="#welcomePage" data-direction="reverse" class='ui-btn-right'  data-icon='home' >Home</a>
+  </div>
+ 
+  <div data-role="content">
+    <form id="ytkURLForm" action="#" method="get">
+      <div data-role="fieldcontain">
+        <label for="ytkURLField">YourTapperKeeper URL:</label>
+        <input id="ytkURLField" type="text" name="ytkURLField" />
+      </div>
+      <button type="submit">Submit</button>
+    </form>
+ 
+  </div>
+ 
+  <div data-role="footer">
+    <h4>Page Footer</h4>
+  </div>
+</div>
+
+<div data-role="page" id="listArchivesPage">
+ 
+  <div data-role="header">
+    <h1>Available Archives</h1>
+    <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
+  </div>
+ 
+  <div data-role="content">
+    <ul data-role="listview" data-filter="true" id="archivesList">
+    </ul>
+ 
+  </div>
+ 
+  <div data-role="footer">
+    <h4>Page Footer</h4>
+  </div>
+</div>
+
+<div data-role="page" id="showArchivePage">
+ 
+  <div data-role="header">
+  <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
+    <h1>Show Archive</h1>
+  </div>
+ 
+  <div data-role="content">
+  
+    <div class="ui-bar ui-bar-e" id="archive_info"></div>
+    
+    <ul data-role="listview" data-inset="true" id="archiveWidgetsList">
+    <li><a href="#showMsgsPage"> Browse Messages</a><span id="browseMessagesCount" class="ui-li-count"></span></li>
+    </ul>
+ 
+  </div>
+ 
+  <div data-role="footer">
+    <h4></h4>
+  </div>
+</div>
+
+<div data-role="page" id="showMsgsPage">
+ 
+  <div data-role="header">
+  <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
+    <h1>Messages</h1>
+  </div>
+ 
+  <div data-role="content">
+    <ul data-role="listview" id="msgList">
+    </ul>
+ 
+  </div>
+ 
+  <div data-role="footer">
+    <h4><button type="submit" id="moreMsgsButton">more Messages</button></h4>
+  </div>
+</div>
+
+<div data-role="page" id="ErrorPage">
+ 
+  <div data-role="header">
+  <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
+    <h1>Error</h1>
+  </div>
+ 
+  <div data-role="content">
+    <p>Error</p>
+ 
+  </div>
+ 
+  <div data-role="footer">
+  <h4>Footer</h4>
+  </div>
+</div>
+
+  <!-- JavaScript at the bottom for fast page loading -->
+
+<script type="text/javascript" src="js/libs/jquery-1.6.1.min.js"></script>
+ <script type="text/javascript" src="js/mylibs/jquery.mobile-1.0b1.min.js"></script> 
+
+<!-- <script type="text/javascript" src="http://code.jquery.com/mobile/latest/jquery.mobile.min.js"></script>-->
+
+  <script src="js/script.js"></script> 
+  <script src="js/plugins.js"></script> 
+  <!-- scripts concatenated and minified via ant build script -->
+  <script src="js/mylibs/helper.js"></script>
+  <script src="nowjs/now.js"></script>
+  <!-- end concatenated and minified scripts-->
+  
+  <script>
+    // iPhone Scale Bug Fix, read this when using http://www.blog.highub.com/mobile-2/a-fix-for-iphone-viewport-scale-bug/
+    MBP.scaleFix();
+    
+    // Media Queries Polyfill https://github.com/shichuan/mobile-html5-boilerplate/wiki/Media-Queries-Polyfill
+    yepnope({
+      test : Modernizr.mq('(min-width)'),
+      nope : ['js/libs/respond.min.js']
+    });
+  </script>
+</body>
+</html>
