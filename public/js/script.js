@@ -5,17 +5,26 @@ var currentMsg=0;
 var addMsgVal=5;
 var isNowReady= false;
 
-$(document).ready(function() {
+
+
+  
+  
+
+
+
+$(window).load(function(){ $(document).ready(function() {
 
   //Bindings and Settings
   var selectedYTKID;
   var lastSelectedYTKID;
   var ytkURL = $.cookie('ytkURL');
-  if(ytkURL== null || ytkURL==""){
+
+if(ytkURL== null || ytkURL==""){
     noVaildYtrkURL();
   }else{
     setUpApiUrls(ytkURL);
   }
+  
   
 now.ready(function(){
   if(isNowReady == false && ytkURL != null){
@@ -30,6 +39,8 @@ now.ready(function(){
         popErrorMessage("Error: "+jsondata.msg+"Check the yourTwapperKepper URL",2500);
       }
     });
+  }else{
+    popErrorMessage("Error: Check the yourTwapperKepper URL",2500);
   }
   console.log("Now is ready");
 } );
@@ -43,7 +54,7 @@ now.core.on('disconnect', function(){
       $('#ytkURLField').val(ytkURL);
     }
   });
-    
+  /*
   //FIXME actually I want to bind it with showMsgsPage but i won't work
   $(document).bind("scrollstop", function() {
   // From https://github.com/paulirish/infinite-scroll
@@ -60,7 +71,7 @@ now.core.on('disconnect', function(){
       //console.log(pixelsFromWindowBottomToBottomInPercent,"%");
     }
   });
-    
+    */
     //Welcome Page
     $( '#hashtagForm :submit' ).click( function(event) {
       event.preventDefault();
@@ -74,7 +85,7 @@ now.core.on('disconnect', function(){
         if(selectedYTKID == "error"){
           popErrorMessage("Can't analyse this archive",500);
         }else{
-          $.mobile.changePage($("#showArchivePage"),{ transition: "slide"});
+          $.mobile.changePage("#showArchivePage");
         }
       }
   }); 
@@ -84,7 +95,7 @@ now.core.on('disconnect', function(){
   if(ytkURL==null || ytkURL==""){
       noVaildYtrkURL();
     }else{
-      $.mobile.changePage($("#listArchivesPage"),{ transition: "slide"});
+      $.mobile.changePage("#listArchivesPage");
       
     }
   });
@@ -106,7 +117,7 @@ now.core.on('disconnect', function(){
         now.jsonListArchives = jsondata.data[0];
         $('#listHashtagsButton').parent().find('.ui-btn-text').text("List Hashtag Archives ("+now.jsonListArchives.length+")");
         $.post('/ytkURLCookie',{ytkURL: ytkURL}, function(data) {
-          $.mobile.changePage($("#welcomePage"),{ transition: "slide"});
+          $.mobile.changePage("#welcomePage");
         });
       }else{
         popErrorMessage("Error: "+jsondata.msg+"Check the yourTwapperKepper URL",2500);
@@ -136,7 +147,7 @@ now.core.on('disconnect', function(){
           setArchiveInfo(now.jsonCurrentArchive.archive_info, $('#archive_info'));
         }else{
           popErrorMessage("Error: "+jsondata.msg+"Check the yourTwapperKepper URL",2500);
-          //$.mobile.changePage($("#ErrorPage"),{ transition: "slide"});
+          //$.mobile.changePage("#ErrorPage");
         }
       });
       if(lastSelectedYTKID == null){
@@ -157,17 +168,25 @@ now.core.on('disconnect', function(){
     currentMsg=0;
     setMsgs(now.jsonCurrentArchive.tweets);
   });
+  // Search for Tweets Page
+  $( '#queryForTweetsForm :submit' ).click( function(event) {
+      event.preventDefault();
+      var queryForTweetsFormVars = $('#queryForTweetsForm').serializeArray();
+      console.log(queryForTweetsFormVars);
+  }); 
+
+  
   
 //===============END OF DOC READY===============
-});
+});});
 
 function setUpApiUrls(url){
   apiListArchivesUrl = url+ "apiListArchives.php";
   apiGetTweetsUrl = url+ "apiGetTweets.php";
 }
 function noVaildYtrkURL(){
-  popErrorMessage("You have to enter a vaild YourTwapperKeeper instance.",2000);
-  $.mobile.changePage($("#optionsPage"),{ transition: "slide"});
+  //popErrorMessage("You have to enter a vaild YourTwapperKeeper instance.",2000);
+  $.mobile.changePage("#optionsPage");
 }
 function insertArchiveList(data){
   var archivesList = $('#archivesList');
