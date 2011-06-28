@@ -5,18 +5,11 @@ var currentMsg=0;
 var addMsgVal=5;
 var isNowReady= false;
 
-
-
-  
-  
-
-
-
 $(window).load(function(){ $(document).ready(function() {
 
   //Bindings and Settings
-  var selectedYTKID;
-  var lastSelectedYTKID;
+  var selectedArchive;
+  var lastselectedArchive;
   var ytkURL = $.cookie('ytkURL');
 
 if(ytkURL== null || ytkURL==""){
@@ -54,7 +47,7 @@ now.core.on('disconnect', function(){
       $('#ytkURLField').val(ytkURL);
     }
   });
-  /*
+  
   //FIXME actually I want to bind it with showMsgsPage but i won't work
   $(document).bind("scrollstop", function() {
   // From https://github.com/paulirish/infinite-scroll
@@ -71,20 +64,20 @@ now.core.on('disconnect', function(){
       //console.log(pixelsFromWindowBottomToBottomInPercent,"%");
     }
   });
-    */
+    
     //Welcome Page
     $( '#hashtagForm :submit' ).click( function(event) {
       event.preventDefault();
-      var hashtagField = $('#hashtagField').val();
+      var hashtagFormVars = $('#hashtagForm').serializeArray();
       if(ytkURL==null || ytkURL==""){
         noVaildYtrkURL();
       }else{
-        //console.log("hashtagForm :submit");
-        lastSelectedYTKID = selectedYTKID;
-        selectedYTKID = validateHashtagField(hashtagField, now.jsonListArchives);
-        if(selectedYTKID == "error"){
+       hashtagFormVars[0].value = validateHashtagField(hashtagFormVars[0].value, now.jsonListArchives);
+        if(hashtagFormVars[0].value == "error"){
           popErrorMessage("Can't analyse this archive",500);
         }else{
+          hashtagFormVars = splitDates(hashtagFormVars);
+          selectedArchive = hashtagFormVars;
           $.mobile.changePage("#showArchivePage");
         }
       }
@@ -103,7 +96,7 @@ now.core.on('disconnect', function(){
     // Options Page
   $( '#ytkURLForm :submit' ).click( function(event) {
     event.preventDefault();
-    ytkURL =  $('#ytkURLField').val();
+    ytkURL = $('#ytkURLField').val();
   if (ytkURL!=null && ytkURL!=""){
     if(ytkURL.lastIndexOf("/") != (ytkURL.length-1))
       ytkURL=ytkURL+"/";
@@ -117,7 +110,8 @@ now.core.on('disconnect', function(){
         now.jsonListArchives = jsondata.data[0];
         $('#listHashtagsButton').parent().find('.ui-btn-text').text("List Hashtag Archives ("+now.jsonListArchives.length+")");
         $.post('/ytkURLCookie',{ytkURL: ytkURL}, function(data) {
-          $.mobile.changePage("#welcomePage");
+          $.mobile.changePage("#welcomePage",{transition: "slide",reverse: true});
+          now.ytkURL = ytkURL;
         });
       }else{
         popErrorMessage("Error: "+jsondata.msg+"Check the yourTwapperKepper URL",2500);
@@ -131,29 +125,45 @@ now.core.on('disconnect', function(){
   });
 
   $('#archivesList').delegate('a', 'click', function(event) {  
-    lastSelectedYTKID = selectedYTKID;
-    selectedYTKID = $(this).attr("ytkaid");
+    var id = new Object();
+    id.name = "id";
+    id.value = $(this).attr("ytkaid");
+    selectedArchive = new Array(id);
+
   });
 
   // Show Archive Page
   $('#showArchivePage').live('pagebeforeshow',function(){
-     //console.log("test");
-    // FIXME First run result in undefied != some-id, so always true.
-    if(lastSelectedYTKID != selectedYTKID){
-      now.getArchive(selectedYTKID,function(jsondata){
-        console.log("getArchive", lastSelectedYTKID, selectedYTKID, jsondata);
+
+    // First run result in undefied != some-id, so always true.
+    if(lastselectedArchive != selectedArchive){
+      $('#downloadSliderBox').show();
+      $('#downloadSlider').val(0).slider("refresh");
+      $('#downloadSliderBox').find('input[type="number"]').hide();
+      now.getArchive(selectedArchive,function(jsondata){
+        console.log("getArchive", lastselectedArchive, selectedArchive, jsondata);
         if(jsondata.status == "ok"){
           now.jsonCurrentArchive = jsondata.data;
           setArchiveInfo(now.jsonCurrentArchive.archive_info, $('#archive_info'));
+          if(now.jsonCurrentArchive.archive_info.count == 0){
+            popErrorMessage("Selection has no Messages",1500);
+            $.mobile.changePage("#welcomePage");
+          }
         }else{
           popErrorMessage("Error: "+jsondata.msg+"Check the yourTwapperKepper URL",2500);
           //$.mobile.changePage("#ErrorPage");
         }
       });
-      if(lastSelectedYTKID == null){
-        lastSelectedYTKID = selectedYTKID;
-      }
+      lastselectedArchive = selectedArchive;
     }
+
+    
+  });
+  
+  $("#debugButton").click(function(){
+    now.msgAmount(function (data){
+      console.log(data);
+    });
   });
   
   // Show Msg Page
@@ -168,17 +178,22 @@ now.core.on('disconnect', function(){
     currentMsg=0;
     setMsgs(now.jsonCurrentArchive.tweets);
   });
-  // Search for Tweets Page
-  $( '#queryForTweetsForm :submit' ).click( function(event) {
-      event.preventDefault();
-      var queryForTweetsFormVars = $('#queryForTweetsForm').serializeArray();
-      console.log(queryForTweetsFormVars);
-  }); 
 
-  
+  now.updateDowloadSlider = function(par) {
+    $('#downloadSlider').val(par).slider("refresh");
+    if(par == 100){
+      $('#downloadSliderBox').fadeOut(800);
+    }
+  };
+    
+  now.clientTest = function(par) {
+    console.log("nerv",par);
+  };
   
 //===============END OF DOC READY===============
 });});
+
+
 
 function setUpApiUrls(url){
   apiListArchivesUrl = url+ "apiListArchives.php";
@@ -212,10 +227,6 @@ function setMsgs(data){
   addMsgs(data);
 }
 
-function testfunct(datat){
-console.log("buhuh",datat);
-}
-
 function addMsgs(data){
   //console.log("addMsgs",currentMsg,data);
   var msgList = $('#msgList');
@@ -230,7 +241,7 @@ function addMsgs(data){
 
 
 function getMsgEntryHTML(entry){
-var entryHtml = ["<li ><img src=", entry.profile_image_url, "> <h3>",entry.from_user,"</h3><p><strong>",getHTMLLinksForText(entry.text),"</strong></p><p>",entry.created_at," Tweet id <a href=\"http://twitter.com/#!/",entry.from_user,"/status/",entry.id,"\" target=\"_blank\">",entry.id,"</a></p>"].join("");
+var entryHtml = ["<li ><img src=", entry.profile_image_url.replace("normal","bigger"), "> <h3>",entry.from_user,"</h3><p><strong>",getHTMLLinksForText(entry.text),"</strong></p><p>",entry.created_at," Tweet id <a href=\"http://twitter.com/#!/",entry.from_user,"/status/",entry.id,"\" target=\"_blank\">",entry.id,"</a></p>"].join("");
 
     if(entry.geo_coordinates_0 != 0 ){
       entryHtml = [entryHtml, "<p><a target=\"_blank\" href=\"http://www.openstreetmap.org/?mlat="+entry.geo_coordinates_0+"&mlon="+entry.geo_coordinates_1+"&zoom=15&layers=M\">geo info:",entry.geo_type," - lat = ", entry.geo_coordinates_0," - long = ",entry.geo_coordinates_1,"</p>"].join("");
@@ -296,7 +307,35 @@ function getHTMLLinksForText(text){
   return text;
 }
 
-
+function splitDates(hashtagFormVars){
+  var startDate = hashtagFormVars[1].value.split("-");
+  var sy = new Object();
+  sy.name = "sy";
+  sy.value = startDate[0];
+  
+  var sm = new Object();
+  sm.name = "sm";
+  sm.value = startDate[1];
+  
+  var sd = new Object();
+  sd.name = "sd";
+  sd.value = startDate[2];
+  
+  var endDate = hashtagFormVars[2].value.split("-");
+  var ed = new Object();
+  ed.name = "ed";
+  ed.value = endDate[2];
+  var em = new Object();
+  em.name = "em";
+  em.value = endDate[1];
+  var ey = new Object();
+  ey.name = "ey";
+  ey.value = endDate[0];
+  
+  hashtagFormVars.splice(1,2,sd,sm,sy,ed,em,ey);
+  
+  return hashtagFormVars;
+}
 
 
 
