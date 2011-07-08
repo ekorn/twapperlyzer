@@ -212,7 +212,13 @@ textarea.contenteditable {-webkit-appearance: none;}
 /* Primary Styles for mobile
    Author:
 */
+.ui-li-desc {
+  white-space: normal;
+}
 
+.ui-li-static.ui-li {
+  padding-right: 5px;
+}
 
 /*
  * Media queries for responsive design https://github.com/shichuan/mobile-html5-boilerplate/wiki/The-Style

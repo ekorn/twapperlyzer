@@ -4,9 +4,10 @@ var maxMsg=10;
 var currentMsg=0;
 var addMsgVal=5;
 var isNowReady= false;
+var map;
 
 $(window).load(function(){ $(document).ready(function() {
-
+//$('#thursdayMensa').trigger('expand');
   //Bindings and Settings
   var selectedArchive;
   var lastselectedArchive;
@@ -76,8 +77,7 @@ now.core.on('disconnect', function(){
         if(hashtagFormVars[0].value == "error"){
           popErrorMessage("Can't analyse this archive",500);
         }else{
-          hashtagFormVars = splitDates(hashtagFormVars);
-          selectedArchive = hashtagFormVars;
+          selectedArchive = createSelectetArchiveObject(hashtagFormVars);
           $.mobile.changePage("#showArchivePage");
         }
       }
@@ -125,11 +125,9 @@ now.core.on('disconnect', function(){
   });
 
   $('#archivesList').delegate('a', 'click', function(event) {  
-    var id = new Object();
-    id.name = "id";
+    id = new Object();
     id.value = $(this).attr("ytkaid");
-    selectedArchive = new Array(id);
-
+    selectedArchive = createSelectetArchiveObject(new Array(id));
   });
 
   // Show Archive Page
@@ -150,7 +148,7 @@ now.core.on('disconnect', function(){
             $.mobile.changePage("#welcomePage");
           }
         }else{
-          popErrorMessage("Error: "+jsondata.msg+"Check the yourTwapperKepper URL",2500);
+          popErrorMessage("Error: "+jsondata.msg+" Check the yourTwapperKepper URL",2500);
           //$.mobile.changePage("#ErrorPage");
         }
       });
@@ -179,10 +177,13 @@ now.core.on('disconnect', function(){
     setMsgs(now.jsonCurrentArchive.tweets);
   });
 
-  now.updateDowloadSlider = function(par) {
-    $('#downloadSlider').val(par).slider("refresh");
-    if(par == 100){
+  now.updateDowloadSlider = function(progress) {
+    $('#downloadSlider').val(progress).slider("refresh");
+    
+    if(progress == 100){
       $('#downloadSliderBox').fadeOut(800);
+      setArchiveInfo(now.jsonCurrentArchive.archive_info, $('#archive_info'));
+      console.log(now.jsonCurrentArchive.archive_info);
     }
   };
     
@@ -190,6 +191,8 @@ now.core.on('disconnect', function(){
     console.log("nerv",par);
   };
   
+  $('#mapPage').live('pagebeforeshow', prepareMapPage);
+  setUpMap();
 //===============END OF DOC READY===============
 });});
 
@@ -208,7 +211,7 @@ function insertArchiveList(data){
   archivesList.empty();
   for(var i=0; i<data.length; i++){
     var entry = data[i];
-    var entryHtml = ['<li><a href="#showArchivePage" ytkaid="'+entry.id+'" ><em>', entry.keyword, '</em>&nbsp;', entry.description,'</a><span class="ui-li-count">'+entry.count+'</span></li>'].join("");
+    var entryHtml = ['<li><a href="#showArchivePage" ytkaid="'+entry.id+'" ><em>', entry.keyword, '</em>&nbsp;', entry.description,'</a><span class="ui-li-count">'+formatNumber(entry.count)+'</span></li>'].join("");
     archivesList.append(entryHtml);
   }
   archivesList.listview('refresh');
@@ -217,8 +220,8 @@ function insertArchiveList(data){
 function setArchiveInfo(data, parent){
 parent.empty();
 var create_time = new Date(data.create_time*1000);//It is in Epoch time, so sec not milisec
-parent.append("<center><h2>"+data.keyword+"</h2><p>"+data.description+"</p><p>"+create_time+"</p><p>total number of tweets = <strong>"+data.count+"</strong></p></center>");
-$('#browseMessagesCount').text(data.count);
+parent.append("<center><h2>"+data.keyword+"</h2><p>"+data.description+"</p><p>"+create_time+"</p><p>total number of tweets = <strong>"+formatNumber(data.count)+"</strong></p></center>");
+$('#browseMessagesCount').text(formatNumber(data.count));
 }
 
 function setMsgs(data){
@@ -244,7 +247,7 @@ function getMsgEntryHTML(entry){
 var entryHtml = ["<li ><img src=", entry.profile_image_url.replace("normal","bigger"), "> <h3>",entry.from_user,"</h3><p><strong>",getHTMLLinksForText(entry.text),"</strong></p><p>",entry.created_at," Tweet id <a href=\"http://twitter.com/#!/",entry.from_user,"/status/",entry.id,"\" target=\"_blank\">",entry.id,"</a></p>"].join("");
 
     if(entry.geo_coordinates_0 != 0 ){
-      entryHtml = [entryHtml, "<p><a target=\"_blank\" href=\"http://www.openstreetmap.org/?mlat="+entry.geo_coordinates_0+"&mlon="+entry.geo_coordinates_1+"&zoom=15&layers=M\">geo info:",entry.geo_type," - lat = ", entry.geo_coordinates_0," - long = ",entry.geo_coordinates_1,"</p>"].join("");
+      entryHtml = [entryHtml, '<p><a href="#mapPage" >geo info:',entry.geo_type," - lat = ", entry.geo_coordinates_0," - long = ",entry.geo_coordinates_1,"</p>"].join("");
     }
     entryHtml = [entryHtml,"</li>"].join("");
     return entryHtml;
@@ -307,64 +310,119 @@ function getHTMLLinksForText(text){
   return text;
 }
 
-function splitDates(hashtagFormVars){
-  var startDate = hashtagFormVars[1].value.split("-");
-  var sy = new Object();
-  sy.name = "sy";
-  sy.value = startDate[0];
+function createSelectetArchiveObject(array){
+  var res = new Object();
+  res.url = "?id="+array[0].value;
+  res.id = array[0].value;
+  res.isSearch = false;
   
-  var sm = new Object();
-  sm.name = "sm";
-  sm.value = startDate[1];
+  if(array.length >7){
+    if(array[1].value != ""){//Start Date
+      var startDate = array[1].value.split("-");
+      res.url = res.url +"&sy="+startDate[0]+"&sm="+startDate[1]+"&sd="+startDate[2];
+      res.isSearch = true;
+    }
+    if(array[2].value != ""){// End Date
+      var endDate = array[2].value.split("-");
+      res.url = res.url +"&ey="+endDate[0]+"&em="+endDate[1]+"&ed="+endDate[2];
+      res.isSearch = true;
+    }
+    if(array[3].value != ""){//From User
+      console.log(array[3]);
+      res.url = res.url +"&"+array[3].name+"="+array[3].value;
+      res.isSearch = true;
+    }
+    if(array[4].value != ""){//Tweet Text
+      res.url = res.url +"&"+array[4].name+"="+array[4].value;
+      res.isSearch = true;
+    }    
+    if(array[5].value != "d"){//Order
+      res.order=array[5].value;
+    }    
+   
+    if(array[6].value != ""){//Limit
+      res.limit = array[6].value;
+      res.isSearch = true;
+    }else{
+      res.limit = now.jsonListArchives[res.id-1].count;
+    }
+    if(array[7].value != ""){//lang
+      res.url = res.url +"&"+array[7].name+"="+array[7].value;
+      res.isSearch = true;
+    }    
+    if(array[8] != null){ // no RTs
+      res.url = res.url +"&"+array[8].name+"="+array[8].value;
+      res.isSearch = true;
+    } 
+  }else{
+    res.limit = now.jsonListArchives[res.id-1].count;
+  }
   
-  var sd = new Object();
-  sd.name = "sd";
-  sd.value = startDate[2];
-  
-  var endDate = hashtagFormVars[2].value.split("-");
-  var ed = new Object();
-  ed.name = "ed";
-  ed.value = endDate[2];
-  var em = new Object();
-  em.name = "em";
-  em.value = endDate[1];
-  var ey = new Object();
-  ey.name = "ey";
-  ey.value = endDate[0];
-  
-  hashtagFormVars.splice(1,2,sd,sm,sy,ed,em,ey);
-  
-  return hashtagFormVars;
+  return res;
 }
 
+function formatNumber(num,prefix){
+   prefix = prefix || '';
+   num += '';
+   var splitStr = num.split('.');
+   var splitLeft = splitStr[0];
+   var splitRight = splitStr.length > 1 ? '.' + splitStr[1] : '';
+   var regx = /(\d+)(\d{3})/;
+   while (regx.test(splitLeft)) {
+      splitLeft = splitLeft.replace(regx, '$1' + ',' + '$2');
+   }
+   return prefix + splitLeft + splitRight;
+}
 
+function unformatNumber(num) {
+   return num.replace(/([^0-9\.\-])/g,'')*1;
+}
 
+String.prototype.trim = function() {
+   return this.replace(/^\s+|\s+$/g,"");
+}
+String.prototype.ltrim = function() {
+   return this.replace(/^\s+/g,"");
+}
+String.prototype.rtrim = function() {
+   return this.replace(/\s+$/g,"");
+}
 
+function prepareMapPage(evt, ui) {
+  console.log("HUHUHhuh");
 
+} 
+    
+function setUpMap(){
+  var mapContainer = $('#mapContainer');
+  var usedHeight = 0;
+        
+  mapContainer.siblings().each(function() {
+    usedHeight += $(this).outerHeight();
+  });
+        
+  mapContainer.height(mapContainer.parent().height() - usedHeight);
+  if (map) {
+      $('#mapContainer').html('');
+    }
+//
+// create a CloudMade tile layer
+  var cloudmadeUrl = 'http://{s}.tile.cloudmade.com/d692a017c2bc4e45a59d57699d0e0ea7/997/256/{z}/{x}/{y}.png',
+      cloudmadeAttribution = 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
+      cloudmade = new L.TileLayer(cloudmadeUrl, {maxZoom: 18, attribution: cloudmadeAttribution});
 
+  // initialize the map on the "map" div
+  map = new L.Map('mapContainer');
 
+  // set the map view to a given center and zoom and add the CloudMade layer
+  map.setView(new L.LatLng(51.505, -0.09), 18).addLayer(cloudmade);
 
+  // create a marker in the given location and add it to the map
+  var markerLocation = new L.LatLng(51.5, -0.09),
+  marker = new L.Marker(markerLocation);
+  map.addLayer(marker);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-var now.jsonCurrentArchive = {"archive_info":{"id":"1","keyword":"#knowaan","description":"Tweets from project group knowAAN at UPB","tags":"","screen_name":"aandev","user_id":"85836202","count":"36","create_time":"1300228322"},"tweets":[{"archivesource":"twitter-search","text":"is wondering how to get access to @TwigKit ... looks like a promising UI framework for our #knowaan project at #upb","to_user_id":"","from_user":"wollepb","id":"78093881635377152","from_user_id":"583211","iso_language_code":"en","source":"&lt;a href=&quot;http:\/\/twitter.com\/&quot;&gt;web&lt;\/a&gt;","profile_image_url":"http:\/\/a2.twimg.com\/profile_images\/1333572768\/avatar_normal.jpg","geo_type":"","geo_coordinates_0":"0","geo_coordinates_1":"0","created_at":"Tue, 07 Jun 2011 13:40:06 +0000","time":"1307454006"},{"archivesource":"twitter-search","text":"\u201c@bramvandeputte: New Researchtable video is public now http:\/\/t.co\/AeVqixs\u201d #knowaan","to_user_id":"","from_user":"wollepb","id":"76009067142848512","from_user_id":"583211","iso_language_code":"en","source":"&lt;a href=&quot;http:\/\/twitter.com\/#!\/download\/ipad&quot; rel=&quot;nofollow&quot;&gt;Twitter for iPad&lt;\/a&gt;","profile_image_url":"http:\/\/a2.twimg.com\/profile_images\/1333572768\/avatar_normal.jpg","geo_type":"Point","geo_coordinates_0":"51.7467","geo_coordinates_1":"8.7168","created_at":"Wed, 01 Jun 2011 19:35:48 +0000","time":"1306956948"},{"archivesource":"twitter-search","text":"OpenStreetMap at OpenTech 2011 http:\/\/zite.to\/mmvs2V #knowaan #maps #opendata","to_user_id":"","from_user":"wollepb","id":"72363237370363904","from_user_id":"583211","iso_language_code":"en","source":"&lt;a href=&quot;http:\/\/www.zite.com\/&quot; rel=&quot;nofollow&quot;&gt;Zite&lt;\/a&gt;","profile_image_url":"http:\/\/a2.twimg.com\/profile_images\/1333572768\/avatar_normal.jpg","geo_type":"","geo_coordinates_0":"0","geo_coordinates_1":"0","created_at":"Sun, 22 May 2011 18:08:34 +0000","time":"1306087714"},{"archivesource":"twitter-search","text":"WOW: http:\/\/vaadin.com - Java framework for building modern web applications that look great and make you and your users happy #knowaan","to_user_id":"","from_user":"wollepb","id":"69334615327916032","from_user_id":"583211","iso_language_code":"en","source":"&lt;a href=&quot;http:\/\/kiwi-app.net&quot; rel=&quot;nofollow&quot;&gt;kiwi&lt;\/a&gt;","profile_image_url":"http:\/\/a2.twimg.com\/profile_images\/1333572768\/avatar_normal.jpg","geo_type":"","geo_coordinates_0":"0","geo_coordinates_1":"0","created_at":"Sat, 14 May 2011 09:33:55 +0000","time":"1305365635"},{"archivesource":"twitter-search","text":"thx @mhausenblas - http:\/\/data.semanticweb.org\/ looks helpful (re 'database of scientific affiliations w\/ geolocations') #knowaan","to_user_id":"","from_user":"wollepb","id":"67576567483731969","from_user_id":"583211","iso_language_code":"en","source":"&lt;a href=&quot;http:\/\/kiwi-app.net&quot; rel=&quot;nofollow&quot;&gt;kiwi&lt;\/a&gt;","profile_image_url":"http:\/\/a1.twimg.com\/profile_images\/1333572768\/avatar_normal.jpg","geo_type":"","geo_coordinates_0":"0","geo_coordinates_1":"0","created_at":"Mon, 09 May 2011 13:08:03 +0000","time":"1304946483"},{"archivesource":"twitter-search","text":"\u201c@otisg: Awesome Lucene performance charts http:\/\/t.co\/ouNRJaa from Mike McCandless #lucene\u201d #knowaan","to_user_id":"","from_user":"wollepb","id":"66396017960030209","from_user_id":"583211","iso_language_code":"en","source":"&lt;a href=&quot;http:\/\/twitter.com\/#!\/download\/ipad&quot; rel=&quot;nofollow&quot;&gt;Twitter for iPad&lt;\/a&gt;","profile_image_url":"http:\/\/a1.twimg.com\/profile_images\/1333572768\/avatar_normal.jpg","geo_type":"Point","geo_coordinates_0":"51.7468","geo_coordinates_1":"8.7167","created_at":"Fri, 06 May 2011 06:56:58 +0000","time":"1304665018"},{"archivesource":"twitter-stream","text":"Tweet Topic Explorer - Explore what people tweet about http:\/\/t.co\/LZdWFwE via @JeffClark #knowaan #visualization","to_user_id":"","from_user":"wollepb","id":"63675708626571264","from_user_id":"15015126","iso_language_code":"en","source":"<a href=\"http:\/\/twitter.com\/tweetbutton\" rel=\"nofollow\">Tweet Button<\/a>","profile_image_url":"http:\/\/a0.twimg.com\/profile_images\/1235327113\/marvin_normal.jpg","geo_type":"","geo_coordinates_0":"0","geo_coordinates_1":"0","created_at":"Thu Apr 28 18:47:26 +0000 2011","time":"1304016446"},{"archivesource":"twitter-stream","text":"clustering &gt;6000 #edmedia papers took more than 4 hours... very interesting findings #knowaan","to_user_id":"","from_user":"wollepb","id":"60779617274961920","from_user_id":"15015126","iso_language_code":"en","source":"<a href=\"http:\/\/kiwi-app.net\" rel=\"nofollow\">Kiwi<\/a>","profile_image_url":"http:\/\/a0.twimg.com\/profile_images\/1235327113\/marvin_normal.jpg","geo_type":"","geo_coordinates_0":"0","geo_coordinates_1":"0","created_at":"Wed Apr 20 18:59:24 +0000 2011","time":"1303325964"},{"archivesource":"twitter-stream","text":"looks like @gephi has hit 0.8 alpha #visualization #knowaan http:\/\/gephi.org\/","to_user_id":"","from_user":"wollepb","id":"59953187083403264","from_user_id":"15015126","iso_language_code":"en","source":"<a href=\"http:\/\/kiwi-app.net\" rel=\"nofollow\">Kiwi<\/a>","profile_image_url":"http:\/\/a0.twimg.com\/profile_images\/1235327113\/marvin_normal.jpg","geo_type":"","geo_coordinates_0":"0","geo_coordinates_1":"0","created_at":"Mon Apr 18 12:15:28 +0000 2011","time":"1303128928"},{"archivesource":"twitter-search","text":"@_denic wenn die pg mitmacht bin ich dabei:-) #knowaan","to_user_id":"32788433","from_user":"shabazza","id":"58789774416297984","from_user_id":"4275888","iso_language_code":"de","source":"&lt;a href=&quot;http:\/\/www.tweetdeck.com&quot; rel=&quot;nofollow&quot;&gt;TweetDeck&lt;\/a&gt;","profile_image_url":"http:\/\/a3.twimg.com\/profile_images\/1168727829\/Picture0007_normal.jpg","geo_type":"","geo_coordinates_0":"0","geo_coordinates_1":"0","created_at":"Fri, 15 Apr 2011 07:12:29 +0000","time":"1302851549"}]};
-
-var apitListArchivesTest = [[{"id":"1","keyword":"#knowaan","description":"Tweets from project group knowAAN at UPB","tags":"","screen_name":"aandev","user_id":"85836202","count":"36","create_time":"1300228322"},{"id":"2","keyword":"#ectel11","description":"Tweets from the EC-TEL 2011 conference","tags":"","screen_name":"aandev","user_id":"85836202","count":"54","create_time":"1300229370"},{"id":"3","keyword":"innovation","description":"Innovation keyword archive","tags":"","screen_name":"aandev","user_id":"85836202","count":"689637","create_time":"1300229406"},{"id":"4","keyword":"#edmedia","description":"Tweets from the ED-MEDIA conferences","tags":"","screen_name":"aandev","user_id":"85836202","count":"59","create_time":"1300229532"},{"id":"5","keyword":"#stellarnet","description":"Tweets from the STELLAR project","tags":"","screen_name":"aandev","user_id":"85836202","count":"25","create_time":"1300229570"},{"id":"6","keyword":"#ple_sou","description":"Tweets from the PLE_SOU conference","tags":"","screen_name":"aandev","user_id":"85836202","count":"395","create_time":"1300229586"},{"id":"7","keyword":"#cscw11","description":"Tweets from the CSCW 2011 conference","tags":"","screen_name":"wollepb","user_id":"15015126","count":"42","create_time":"1300407553"},{"id":"8","keyword":"science2.0","description":"Tweets dealing with the topic Science 2.0","tags":"","screen_name":"wollepb","user_id":"15015126","count":"34","create_time":"1300407606"},{"id":"9","keyword":"#cscw2011","description":"Tweets from the CSCW 2011 conference","tags":"","screen_name":"wollepb","user_id":"15015126","count":"515","create_time":"1300407628"},{"id":"10","keyword":"#CeBIT","description":"Tweets about the CeBIT in Hannover (Germany)","tags":"","screen_name":"twapperlytics","user_id":"237864592","count":"1969","create_time":"1300412290"},{"id":"11","keyword":"Fukushima","description":"Tweets around the keyword Fukushima","tags":"","screen_name":"twapperlytics","user_id":"237864592","count":"2129540","create_time":"1300412502"},{"id":"12","keyword":"#arv11","description":"Tweets from the 2011 Alpine Rendez-Vous","tags":"","screen_name":"wollepb","user_id":"15015126","count":"432","create_time":"1300486335"},{"id":"13","keyword":"#delfi11","description":"Tweets from the DeLFI 2011 conference","tags":"","screen_name":"wollepb","user_id":"15015126","count":"4","create_time":"1300486374"},{"id":"14","keyword":"#educamp","description":"EduCamp tweets","tags":"","screen_name":"wollepb","user_id":"15015126","count":"282","create_time":"1300527637"},{"id":"15","keyword":"#echb11","description":"Tweets from EduCamp Bremen 2011","tags":"","screen_name":"wollepb","user_id":"15015126","count":"2460","create_time":"1300527656"},{"id":"16","keyword":"#jtelws11","description":"","tags":"","screen_name":"twapperlytics","user_id":"237864592","count":"43","create_time":"1301317131"},{"id":"17","keyword":"#opendata","description":"Chatter dealing with Open Data","tags":"","screen_name":"wollepb","user_id":"15015126","count":"30704","create_time":"1303032782"},{"id":"18","keyword":"#openscience","description":"Chatter dealing with Open Science","tags":"","screen_name":"wollepb","user_id":"15015126","count":"1035","create_time":"1303032801"},{"id":"19","keyword":"#ple","description":"PLE tweets","tags":"","screen_name":"wollepb","user_id":"15015126","count":"9287","create_time":"1303032841"},{"id":"20","keyword":"#research20","description":"Tweets dealing with Research 2.0","tags":"","screen_name":"wollepb","user_id":"15015126","count":"53","create_time":"1303032924"},{"id":"21","keyword":"#mendeley","description":"Mendeley tweets","tags":"","screen_name":"wollepb","user_id":"15015126","count":"562","create_time":"1304036273"},{"id":"22","keyword":"#ginkgo","description":"ginkgo tweets","tags":"","screen_name":"wollepb","user_id":"15015126","count":"192","create_time":"1304036325"},{"id":"23","keyword":"#jtelss11","description":"Tweets from the JTEL Summer School 2011","tags":"","screen_name":"wollepb","user_id":"15015126","count":"542","create_time":"1304036388"},{"id":"24","keyword":"#rw2011","description":"Tweets from the Royal Wedding 2011","tags":"","screen_name":"wollepb","user_id":"15015126","count":"130629","create_time":"1304038699"},{"id":"25","keyword":"#royalwedding","description":"Tweets from the Royal Wedding 2011","tags":"","screen_name":"wollepb","user_id":"15015126","count":"1058716","create_time":"1304063851"},{"id":"26","keyword":"#iknow11","description":"Tweets from the i-KNOW 2011 conference","tags":"","screen_name":"wollepb","user_id":"15015126","count":"4","create_time":"1304202527"},{"id":"27","keyword":"#scio12","description":"Tweets around Science Online 2012","tags":"","screen_name":"wollepb","user_id":"15015126","count":"654","create_time":"1304338036"},{"id":"28","keyword":"bin laden","description":"The bin Laden raid (and unfolding stories)","tags":"","screen_name":"wollepb","user_id":"15015126","count":"3664511","create_time":"1304338070"},{"id":"29","keyword":"#esc11","description":"Eurovision Song Contest 2011","tags":"","screen_name":"wollepb","user_id":"15015126","count":"18049","create_time":"1305049610"},{"id":"30","keyword":"#ardesc","description":"ESC 2011 auf der ARD","tags":"","screen_name":"wollepb","user_id":"15015126","count":"23854","create_time":"1305050365"},{"id":"31","keyword":"#io2011","description":"Google IO 2011","tags":"","screen_name":"wollepb","user_id":"15015126","count":"40750","create_time":"1305050466"},{"id":"32","keyword":"#esc","description":"Eurovision Song Contest","tags":"","screen_name":"wollepb","user_id":"15015126","count":"41758","create_time":"1305401147"},{"id":"33","keyword":"#eurovision","description":"Eurovision Song Contest","tags":"","screen_name":"wollepb","user_id":"15015126","count":"73489","create_time":"1305401172"},{"id":"34","keyword":"#arple11","description":"Tweets from the ARPLE workshop","tags":"","screen_name":"wollepb","user_id":"15015126","count":"2","create_time":"1305972748"},{"id":"35","keyword":"#arnets11","description":"Tweets from the ARNets workshop","tags":"","screen_name":"wollepb","user_id":"15015126","count":"12","create_time":"1305972764"},{"id":"36","keyword":"@DB_Bahn","description":"bahn.de Twitter Service Chanel","tags":"","screen_name":"twapperlytics","user_id":"237864592","count":"4043","create_time":"1307527276"}],36];
-*/
+  // attach a given HTML content to the marker and immediately open it
+  marker.bindPopup("A pretty CSS3 popup Kuchen.<br />Easily customizable.").openPopup();
+}
 

@@ -37,10 +37,12 @@
 	<!-- more tags for your 'head' to consider https://gist.github.com/849231 -->
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=1"> 
   <link rel="stylesheet" href="css/jquery.mobile-1.0b1.min.css" type="text/css" media="screen" charset="utf-8" /> 
+  <link rel="stylesheet" href="css/style.css?v=1"> 
   <link rel="stylesheet" href="css/jquery.mobile.datebox.min.css" type="text/css" media="screen" charset="utf-8" /> 
-
+	<link rel="stylesheet" href="css/leaflet.css" type="text/css" media="screen" charset="utf-8" />
+	<!--[if lte IE 8]><link rel="stylesheet" href="css/leaflet.ie.css" type="text/css" media="screen" charset="utf-8" /><![endif]-->
+	
   <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
   <script src="js/libs/modernizr-custom.js"></script>
 </head>
@@ -96,13 +98,6 @@
          	<label for="searchOrderD">descending</label>
     </fieldset>
 </div>
-<div data-role="fieldcontain">
- 	<fieldset data-role="controlgroup">
-		<legend></legend>
-		<input type="checkbox" name="nort" id="nort" class="custom" />
-		<label for="nort">remove RTs</label>
-    </fieldset>
-</div>
 
 <div data-role="fieldcontain">
   <label for="selectLimit" class="select">View Limit:</label>
@@ -153,6 +148,13 @@
 <option value="yi">Yiddish (yi)</option><option value="yo">Yoruba (yo)</option>
 <option value="za">Zhuang (za)</option><option value="zh">Chinese (zh)</option><option value="zu">Zulu (zu)</option>
 </select>
+</div>
+<div data-role="fieldcontain">
+ 	<fieldset data-role="controlgroup">
+		<legend></legend>
+		<input type="checkbox" name="nort" id="nort" class="custom" />
+		<label for="nort">remove RTs</label>
+    </fieldset>
 </div>
 
       </div>
@@ -266,21 +268,39 @@
   </div>
 </div>
 
+<div data-role="page" id="mapPage">
+ 
+  <div data-role="header" data-position="fixed">
+  <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
+    <h1>Map</h1>
+  </div>
+ 
+  <div data-role="content" id="mapContainer">
+
+  </div>
+ 
+  <div data-role="footer" data-position="fixed">
+  <h4>Footer</h4>
+  </div>
+</div>
+
   <!-- JavaScript at the bottom for fast page loading -->
 
 <script type="text/javascript" src="js/libs/jquery-1.6.1.min.js"></script>
 <script type="text/javascript">
     $( document ).bind( "mobileinit", function(){ $.mobile.page.prototype.options.degradeInputs.date = 'text'; });	
 </script>
+
+  <!-- scripts concatenated and minified via ant build script-->
 <script type="text/javascript" src="js/mylibs/jquery.mobile-1.0b1.js"></script> 
 <script type="text/javascript" src="js/mylibs/jquery.mobile.datebox.min.js"></script>
-
-  <script src="js/script.js"></script> 
-  <script src="js/plugins.js"></script> 
-  <!-- scripts concatenated and minified via ant build script-->
+  <script src="js/mylibs/leaflet-0.2.1.min.js"></script> 
   <script src="js/mylibs/helper.js"></script> 
-  <script src="nowjs/now.js"></script>
+  <script src="js/plugins.js"></script> 
+  <script src="js/script.js"></script> 
+  
   <!-- end concatenated and minified scripts-->
+  <script src="nowjs/now.js"></script>
   
   <script>
     // iPhone Scale Bug Fix, read this when using http://www.blog.highub.com/mobile-2/a-fix-for-iphone-viewport-scale-bug/
