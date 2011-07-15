@@ -1,6 +1,6 @@
 /*!
  * twapperlizer
- * Copyright (C) 2010-2011 Nicolas Lehmann 
+ * Copyright (C) 2011 Nicolas Lehmann 
  * MIT Licensed
  */
 
@@ -8,21 +8,30 @@
 /**
  * Module dependencies
  */
-
+var crypto = require('crypto');
 var express = require('express');
+var cradle = require('cradle');
+var request = require('request');
+var _ = require('underscore')._
+var twapperlyzerCache = require('./twapper_modules/twapperlyzerCache.js')
 
 var app = module.exports = express.createServer();
-var request = require('request');
- 
-var twapperlyzerCache = require('./twapper_modules/twapperlyzerCache.js')
+var conn = new(cradle.Connection)();
+var db = conn.database('twapperlyzer'); 
+// Create the db if it doesn't exist.
+db.exists(function (error, exists) {
+        if (!exists) db.create();
+});
 
 /**
  * Module Configuration
  */
 var port = (process.env.PORT || 3000);
-var maxMessages = 200;
+var maxMessages = 500;
 var firstMsgsToShow=5;
 var expireTime = 60000*30;
+var apiListArchives = "/apiListArchives.php";
+var apiGetTweets =  "/apiGetTweets.php";
 
 app.configure(function(){
   app.set('views', __dirname + '/views');
@@ -47,6 +56,7 @@ app.configure('production', function(){
  * Module Globals
  */
 var cache = new twapperlyzerCache.TwapperlyzerCache(expireTime);
+var archivesListsCache = new Array();
 
 
 /**
@@ -76,16 +86,19 @@ app.post('/ytkURLCookie', function(req, res){
  */
 app.listen(port);
 console.log('Twaperlizer server listening on port http://0.0.0.0:%d', app.address().port);
+// Print the database connection information.
+conn.info(function (err, json) {
+        if (err == null)
+                console.log("info()\t\t: " + json);
+        else
+                console.log("info() failed\t\t: " + err);
+});
+
 var everyone = require('now').initialize(app);
  
 
-
-
-//apiListArchivesUrl = url+ "apiListArchives.php";
-//apiGetTweetsUrl = url+ "apiGetTweets.php";
-
 /**
- *  A simple Object to tranport the status of action
+ *  A simple Object to transport the status of action
  */
 function ResponseBean(){
   this.status;
@@ -93,10 +106,24 @@ function ResponseBean(){
   this.msg;
 }
 
+/**
+ * Load the archive list from the net and send it to the client
+ *
+ * @param {String} ytkURL The url of the YourTwapperKeeper instance
+ * @param {Function} callback(`ResponseBean`)
+ */
+ everyone.now.getArchiveList = function (ytkURL, callback){
+    pGetJSON(ytkURL+apiListArchives,function(jsondata){
+      callback(jsondata);
+      if(jsondata.status == "ok"){
+        archivesListsCache[ytkURL] = jsondata.data[0];
+      }
+    });
+};
  
 
 /**
- * Load the selectedArchive from the net or the cache.
+ * Load the selectedArchive from the database or the net.
  *
  * @param {Object} selectedArchive The selected archive of the user
  * @param {Function} callback(`ResponseBean`)
@@ -105,17 +132,60 @@ everyone.now.getArchive = function (selectedArchive, callback){
   var that = this;
 
   selectedArchive.totalMsgCount = selectedArchive.limit;
-  selectedArchive.staticURLPart = this.now.ytkURL+ 'apiGetTweets.php';
-  
+  var basicArchiveInfo = createBasicArchiveInfo(selectedArchive);
+
   //Deside the case
   if(selectedArchive.isSearch){
-    archiveDownload(that, selectedArchive, callback);
+    archiveDownload(selectedArchive, basicArchiveInfo,  callback);
   }else{
-    if(cache.isInCache(this.now.ytkURL, selectedArchive.id)){
-      getArchiveFromCache(that, selectedArchive, this.now.ytkURL, callback);
-    }else{
-      archiveDownload(that, selectedArchive, callback);
-    }
+    db.get(basicArchiveInfo._id, function (err, archiveInfoFromDB) {
+      if (err == null){
+        checkForUpdate(selectedArchive, archiveInfoFromDB, callback);
+      }else{
+        archiveDownload(selectedArchive, basicArchiveInfo, callback);
+        console.log("Cant get Document Error: ",err, basicArchiveInfo._id);
+      }
+    });
+  }
+};
+
+function createBasicArchiveInfo(selectedArchive){
+
+  var doc = new Object();
+  //doc._id = selectedArchive.ytkURL+"/"+selectedArchive.id;
+  var md5sum = crypto.createHash('md5');
+  md5sum.update(selectedArchive.ytkURL);
+  md5sum.update(selectedArchive.id);
+  
+  doc._id =  md5sum.digest('hex');
+  doc.archive_info = archivesListsCache[selectedArchive.ytkURL][selectedArchive.id-1];
+  doc.messagesSoFar = "0";
+  doc.timestamp = new Date();
+  doc.lastMessage = "0";
+  doc.isSearch = selectedArchive.isSearch;
+  doc.ytkURL = selectedArchive.ytkURL;
+  return doc;
+}
+
+function checkForUpdate(selectedArchive, archiveInfoFromDB, callback){
+  if(selectedArchive.totalMsgCount == archiveInfoFromDB.messagesSoFar){
+    var res = new ResponseBean();
+    res.status = "ok";
+    res.data = archiveInfoFromDB;
+    callback(res);
+    everyone.now.saveInUserSpace("archiveInfo",archiveInfoFromDB);
+    everyone.now.sendDownloadProgress(100);
+    console.log("get archive info from database");
+  }else{
+    //Untested
+    var res = new ResponseBean();
+    res.status = "ok";
+    res.data = archiveInfoFromDB;
+    callback(res);
+    everyone.now.saveInUserSpace("archiveInfo",archiveInfoFromDB);
+    everyone.now.sendDownloadProgress(getProgessInPercent(archiveInfoFromDB.messagesSoFar,selectedArchive.totalMsgCount));
+    archiveInfoFromDB.tweets = new Array({id:archiveInfoFromDB.lastMessage});
+    getTheMissingMsgs(selectedArchive, archiveInfoFromDB, callback);
   }
 }
 
@@ -127,116 +197,51 @@ everyone.now.getArchive = function (selectedArchive, callback){
  * @param {Object} selectedArchive The selected archive of the user
  * @param {Function} callback(`ResponseBean`) Comes from the getArchive function.
  */
-function archiveDownload(that, selectedArchive, callback){
-  var url = selectedArchive.staticURLPart+selectedArchive.url+'&l='+Math.min(selectedArchive.limit,maxMessages);
+function archiveDownload(selectedArchive, archiveInfo, callback){
+  var url = selectedArchive.ytkURL+apiGetTweets+selectedArchive.url+'&l='+Math.min(selectedArchive.limit,maxMessages);
   //Get the First results to show the user something
   pGetJSON(url,function(jsondata){
     if(jsondata.status == "ok"){
-      //Saving the if it is a Search or not to decide if it belongs in cache
-      jsondata.data.archive_info.noCache = selectedArchive.isSearch;
-      //Return the First results
-      setUpCallback(jsondata.data, (selectedArchive.limit<maxMessages),callback);
+      archiveInfo.tweets = jsondata.data.tweets;
+      //If the archive is bigger download the missing
+      if(selectedArchive.limit>maxMessages){
+        //substract the allready downloaded messages from the total
+        selectedArchive.limit = selectedArchive.limit -maxMessages;
+        
+        getTheMissingMsgs(selectedArchive, archiveInfo, callback);
+      
+      }else{
+         archiveReady(archiveInfo, callback);
+      }
     }else{
-      gettingArchiveFaild(jsondata);
+      gettingArchiveFaild(jsondata, callback);
     }
-    
-    //If the archive is bigger download the missing
-    if(selectedArchive.limit>maxMessages){
-      //substract the allready downloaded messages from the total
-      selectedArchive.limit = selectedArchive.limit -maxMessages;
-      getTheMissingMsgs(that, selectedArchive, jsondata.data);
-    
-    }else{
-       archiveReady(that,jsondata.data);
-    }
+
   });
 }
 
-/**
- * Load the selectedArchive from the cache and returns it to the client. 
- * After getting the archive from the cache it make sure that it's still up to 
- * date. If not it will download the remaing. 
- *
- * @param {Object} that The this scope of the getArchive Function
- * @param {Object} selectedArchive The selected archive of the user
- * @param {Function} callback(`ResponseBean`) Comes from the getArchive Function.
- */
-function getArchiveFromCache(that, selectedArchive, ytkURL, callback){
-  var archiveFromCache = cache.getFromCache(ytkURL, selectedArchive.id);
-  if(archiveFromCache.archive_info.count == selectedArchive.limit){
-    //The easy case just return the cached result.
-    setUpCallback(archiveFromCache, true, callback);
-    archiveFromCache.archive_info.noCache = true;
-    archiveReady(that, archiveFromCache);
-  }else{
-    //FIXME This is still untested 
-    //The Version from the cache has to be updated
-    
-    //substract the allready cached messages from the total
-    selectedArchive.limit = selectedArchive.limit -archiveFromCache.archive_info.count;
-    
-    //First return the cached results
-    setUpCallback(archiveFromCache, false, callback);
-    
-    getTheMissingMsgs(that, selectedArchive, archiveFromCache);
-  }
-}
+
 
 /**
  * Augment the incomplte archive with messages from the net, 
  * put it in the cache and inform the client.
  *
- * @param {Object} that The this scope of the getArchive Function
  * @param {Object} selectedArchive The selected archive of the user
- * @param {Object} savedArchive The incomplete archive.
+ * @param {Object} archiveInfo The incomplete archive.
+ * @param {Function} callback(`ResponseBean`) Comes from the getArchive function.
  */
-function getTheMissingMsgs(that, selectedArchive, savedArchive){
+function getTheMissingMsgs(selectedArchive, archiveInfo, callback){
   //Get the missing Messages
   var savedMsgs = new ResponseBean();
-  savedMsgs.data = savedArchive.tweets
+  savedMsgs.data = archiveInfo.tweets
   getMoreMsgs(selectedArchive,savedMsgs,function(msgs){
     if(msgs.status=="ok"){
-      savedArchive.tweets = msgs.data;
-      archiveReady(that, savedArchive);
+      archiveInfo.tweets = msgs.data;
+      archiveReady(archiveInfo, callback);
     }else{
-      gettingArchiveFaild(msgs);
+      gettingArchiveFaild(msgs, callback);
     }
   });
-}
-
-/**
- * Build and prepare a `ResponseBean` with the archive info and the 
- * first couple of messages. Finnaly send it back to the client.
- *
- * @param {Object} archive The ytk archive
- * @param {Boolean} isComplete True if the archive is allready complete
- * @param {Function} callback(`ResponseBean`) Comes from the getArchive Function.
- */
-function setUpCallback(archive, isComplete, callback){
-  var myresponse = new ResponseBean();
-
-  var fakeArchive = new Object();
-  //need a empty arry to copy the first messages
-  fakeArchive.tweets= new Array();
-  myresponse.data = fakeArchive;
-  myresponse.status = "ok";
-  myresponse.data.archive_info = archive.archive_info;
-  
-  //other wise the loop might fail
-  if(archive.tweets == null){
-    archive.tweets = new Array();
-  }
-  
-  //Copy the first messages to save bandwidth
-  for(var i=0; i<Math.min(firstMsgsToShow,archive.tweets.length); i++){
-    myresponse.data.tweets[i]=archive.tweets[i];
-  }
-  
-  if(!isComplete){
-    myresponse.data.archive_info.count = "-";
-  }
-
-  callback(myresponse);
 }
 
 /**
@@ -245,30 +250,44 @@ function setUpCallback(archive, isComplete, callback){
  *
  * @param {Object} that The this scope of the getArchive Function
  * @param {Object} archive The complete archive.
+ * @param {Function} callback(`ResponseBean`) Comes from the getArchive function.
  */
-function archiveReady(that, archive){
-  //Correct the length in the info
-  archive.archive_info.count = archive.tweets.length;
-  //Save the final whole archive in the userspace
-  that.user.jsonCurrentArchive = archive;
-  
-  // If it is no seach add it to the cache, it dosen't make sense to cache searches
-  if(!archive.archive_info.noCache){
-    cache.addToCache(that.now.ytkURL, archive);
-  }
+function archiveReady(archiveInfo, callback){
 
-  //Also update the length info and the download progrss on the client side
-  that.now.jsonCurrentArchive.archive_info.count = archive.tweets.length;
-  everyone.now.sendDownloadProgress(100);
+  analyse(archiveInfo, function(doc){
+    if(!archiveInfo.isSerach){
+      db.save(doc, function (err, res) {
+        if (!res)
+          console.log("Failed to save document: ", err);
+        else
+          console.log("Document saved.",res);
+      });
+    }
+    everyone.now.saveInUserSpace("archiveInfo",doc);
+    var res = new ResponseBean();
+    res.status = "ok";
+    res.data = doc;
+    callback(res);
+    everyone.now.sendDownloadProgress(100);
+  });
 }
 
 /**
  * Is called when getting the Archive faild and handle the error.
  *
  * @param {`ResponseBean`} err
+ * @param {Function} callback(`ResponseBean`) Comes from the getArchive function.
  */
-function gettingArchiveFaild(err){
+function gettingArchiveFaild(err, callback){
   console.log('gettingArchiveFaild', err.status);
+}
+
+everyone.now.saveInUserSpace = function (name, data){
+    this.user[name] = data;
+}
+
+everyone.now.getGeoMarker = function (callback){
+    callback(this.user.archiveInfo.geoInfo);
 }
 
 /**
@@ -289,8 +308,10 @@ function getMoreMsgs(selectedArchive, msgs, callback){
     
     //The max Id is needed so that the next download start where the last ended.
     selectedArchive.max_id = (msgs.data[msgs.data.length-1].id);
+    msgs.data.pop();
+    urlLimit++;
     
-    var url = selectedArchive.staticURLPart+selectedArchive.url+"&l="+urlLimit+"&max_id="+selectedArchive.max_id;
+    var url = selectedArchive.ytkURL+apiGetTweets+selectedArchive.url+"&l="+urlLimit+"&max_id="+selectedArchive.max_id;
     pGetJSON(url,function(jsondata){
           if(jsondata.status == "ok"){
             msgs.status = jsondata.status;
@@ -304,6 +325,7 @@ function getMoreMsgs(selectedArchive, msgs, callback){
           }
     });
   }else{
+    everyone.now.sendDownloadProgress(100);
     callback(msgs);
   }
 }
@@ -341,11 +363,18 @@ this.now.updateDowloadSlider(percent);
  * @param {Number} to
  * @param {Function} callback(`String`)
  */
-everyone.now.getMsgs = function(from, to, callback){
-  for(from; from<Math.min(to,this.user.jsonCurrentArchive.tweets.length); from++){
-    this.now.jsonCurrentArchive.tweets[from] = this.user.jsonCurrentArchive.tweets[from]
+everyone.now.getMsgs = function(lastID, limit, callback){
+  var url = this.user.archiveInfo.ytkURL+apiGetTweets+"?id="+this.user.archiveInfo.archive_info.id+"&l="+limit;
+  if(lastID != 0){
+    url+="&max_id="+lastID;
   }
-  callback("ok");
+  pGetJSON(url, function(response){
+    if(response.status == "ok"){
+      callback(response.data.tweets);
+    }else{
+      console.log("Error while loading messages ",response);
+    }
+  });
 };
 
 /**
@@ -358,11 +387,10 @@ var pGetJSON = function (url,callback){
   //console.log("try to reach: ", url);
   request({ uri:url }, function (error, response, body) {
     var myresponse = new ResponseBean();
-    if (error && response.statusCode !== 200) {
+    if (error) {
       myresponse.status = "error";
       myresponse.msg = "Could not connect to: "+url;
-    }
-    if(body[0]=="{" || body[0]=="["){
+    }else if(body[0]=="{" || body[0]=="["){
       myresponse.status = "ok";
       try {
         myresponse.data = JSON.parse(body);
@@ -387,5 +415,81 @@ var pGetJSON = function (url,callback){
  */
 everyone.now.getJSON = pGetJSON;
 
+function analyse(archiveInfo,callback){
+  
+  //The diffrent analyses
+  archiveInfo.geoInfo = getGeoInfoFromMessages(archiveInfo.tweets)
+  
+  archiveInfo.messagesSoFar = archiveInfo.tweets.length;
+  archiveInfo.lastMessage = _.last(archiveInfo.tweets).id;
+  archiveInfo.tweets = new Array();
+  callback(archiveInfo);
+}
 
+/**
+ * Search for messages that are have a geo tag and aggregate 
+ * them if the are on the same position.
+ * 
+ * @param{Array} messages The Messages that came from twapperkeeper
+ * @return{Array} res The aggregated geo Positions of in input Array
+ */
+function getGeoInfoFromMessages(messages){
+  var res = new Array();
+  var al = messages.length;
+  for (var i = 0; i <al ; i++) {
+    if(messages[i].geo_coordinates_0 != 0 || messages[i].geo_coordinates_1 != 0){
+      //detect if the was already a message send at this place
+      var wasSeen =  _.detect(res, function(marker){
+        return (marker.lat == messages[i].geo_coordinates_0 && marker.long == messages[i].geo_coordinates_1);
+        });
+      if(_.isUndefined(wasSeen)){
+        //Setting uo a new marker with a position
+        var geoMarkerInfo = new Object();
+        geoMarkerInfo.lat = messages[i].geo_coordinates_0;
+        geoMarkerInfo.long = messages[i].geo_coordinates_1;
+        
+        //a user with name
+        var user = new Object();
+        user.name = messages[i].from_user;
+                
+        //and the tweetID + time
+        user.tweets = new Array();
+        var newTweet = new Object();
+        newTweet.id = messages[i].id;
+        newTweet.time = messages[i].time;
+        user.tweets.push(newTweet);
+        
+        //adding the user to marker
+        geoMarkerInfo.users = new Array(user);
 
+        res.push(geoMarkerInfo);
+      }else{
+        //detect if it is the same user as last time
+        var user =  _.detect(wasSeen.users, function(user){
+          return (user.name == messages[i].from_user);
+        });
+        if(_.isUndefined(user)){
+          //A new User
+          user = new Object();
+          user.name = messages[i].from_user;
+          
+          //Set up his tweet Array
+          user.tweets = new Array();
+          var newTweet = new Object();
+          newTweet.id = messages[i].id;
+          newTweet.time = messages[i].time;
+          user.tweets.push(newTweet);
+          
+          wasSeen.users.push(user);
+        }else{
+          //Just add the new tweet to the existing Array
+          var newTweet = new Object();
+          newTweet.id = messages[i].id;
+          newTweet.time = messages[i].time;
+          user.tweets.push(newTweet);
+        }
+      }
+    }
+  }
+  return res;
+}

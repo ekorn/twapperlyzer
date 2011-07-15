@@ -57,15 +57,15 @@
   </div>
  
   <div data-role="content">
- <button type="submit" data-icon="grid" id="listHashtagsButton">List Hashtag Archives </button>
+  <a href="#listArchivesPage" data-icon="grid" data-role="button" id="listHashtagsButton">List Hashtag Archives </a>
   <p><center><strong>or</strong></center></p>
 
-    <form id="hashtagForm" action="#" method="get">
+    <form id="chooseArchiveForm" action="#" method="get">
       <div data-role="fieldcontain">
         <label for="hashtagField" alt="Hastag or Archive ID">Enter Hashtag:</label>
         <input id="hashtagField" type="text" name="id" />
       </div>
-      <div data-role="collapsible" data-collapsed="true">
+      <div data-role="collapsible" data-collapsed="true" style="width: 98%; margin-left: auto; margin-right: auto;">
         <h3>More Options</h3>
         <div data-role="fieldcontain">
 <label for="startDate">Start Date:</label>
@@ -224,6 +224,7 @@
     </div>
     <ul data-role="listview" data-inset="true" id="archiveWidgetsList">
     <li><a href="#showMsgsPage"> Browse Messages</a><span id="browseMessagesCount" class="ui-li-count"></span></li>
+    <li><a href="#mapPage"> Show Taged messages on the Map</a><span id="geoMarkerCount" class="ui-li-count">-</span></li>
     </ul>
  
   </div>
@@ -295,6 +296,7 @@
 <script type="text/javascript" src="js/mylibs/jquery.mobile-1.0b1.js"></script> 
 <script type="text/javascript" src="js/mylibs/jquery.mobile.datebox.min.js"></script>
   <script src="js/mylibs/leaflet-0.2.1.min.js"></script> 
+  <script src="js/mylibs/underscore-min.js"></script>
   <script src="js/mylibs/helper.js"></script> 
   <script src="js/plugins.js"></script> 
   <script src="js/script.js"></script> 
