@@ -41,6 +41,7 @@
   <link rel="stylesheet" href="css/style.css?v=1"> 
   <link rel="stylesheet" href="css/jquery.mobile.datebox.min.css" type="text/css" media="screen" charset="utf-8" /> 
 	<link rel="stylesheet" href="css/leaflet.css" type="text/css" media="screen" charset="utf-8" />
+  <link rel="stylesheet" href="css/jqcloud.css" type="text/css" />
 	<!--[if lte IE 8]><link rel="stylesheet" href="css/leaflet.ie.css" type="text/css" media="screen" charset="utf-8" /><![endif]-->
 	
   <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
@@ -178,7 +179,7 @@
     <form id="ytkURLForm" action="#" method="get">
       <div data-role="fieldcontain">
         <label for="ytkURLField">YourTapperKeeper URL:</label>
-        <input id="ytkURLField" type="text" name="ytkURLField" />
+        <input id="ytkURLField" type="text" name="ytkURLField" value="http://imhotep.cs.upb.de/twapperkeeper/" />
       </div>
       <button type="submit" >Submit</button>
     </form>
@@ -225,6 +226,10 @@
     <ul data-role="listview" data-inset="true" id="archiveWidgetsList">
     <li><a href="#showMsgsPage"> Browse Messages</a><span id="browseMessagesCount" class="ui-li-count"></span></li>
     <li><a href="#mapPage"> Show Taged messages on the Map</a><span id="geoMarkerCount" class="ui-li-count">-</span></li>
+    <li><a href="#archiveLinksPage"> Show the Links </a><span id="archiveLinksCount" class="ui-li-count">-</span></li>
+    <li><a href="#archiveHashtagsPage"> Show the Hashtags </a><span id="archiveHashtagsCount" class="ui-li-count">-</span></li>
+    <li><a href="#archiveMentionsPage"> Show the Mentions </a><span id="archiveMentionsCount" class="ui-li-count">-</span></li>
+    <li><a href="#archiveUsersPage"> Show the Users </a><span id="archiveUsersCount" class="ui-li-count">-</span></li>    
     </ul>
  
   </div>
@@ -285,6 +290,8 @@
   </div>
 </div>
 
+
+
   <!-- JavaScript at the bottom for fast page loading -->
 
 <script type="text/javascript" src="js/libs/jquery-1.6.1.min.js"></script>
@@ -300,7 +307,10 @@
   <script src="js/mylibs/helper.js"></script> 
   <script src="js/plugins.js"></script> 
   <script src="js/script.js"></script> 
-  
+  <script type="text/javascript" src="/js/mylibs/highcharts.js"></script>
+  <script type="text/javascript" src="/js/mylibs/themes/grid.js"></script>
+  <script type="text/javascript" src="/js/mylibs/modules/exporting.js"></script>
+   <script type="text/javascript" src="/js/mylibs/jqcloud-0.2.0.js"></script>
   <!-- end concatenated and minified scripts-->
   <script src="nowjs/now.js"></script>
   

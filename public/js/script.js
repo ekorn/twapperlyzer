@@ -1,5 +1,6 @@
 var $_GET = getQueryParams(document.location.search);
 var map;
+var chart;
 var options;
 var currentArchive;
 var archiveList;
@@ -35,6 +36,7 @@ $(window).load(function(){ $(document).ready(function() {
   //FIXME actually I want to bind it with showMsgsPage but it won't work
   $(document).bind("scrollstop", loadMsgAtPageEnd);
   now.updateDowloadSlider = updateTheDownloadSlider;
+  now.partIsSaved = partIsSaved;
   $('#archiveWidgetsList').delegate('a', 'click', archiveWidgetsListHandler);
   
   $("#debugButton").click(function(){
@@ -91,6 +93,14 @@ function handleNowReady() {
 
     now.wasReadyBefore = true;
     if(options != null){
+
+      $.mobile.pageContainer.append(buildPage("archiveMentionsPage", "archiveMentionsContainer", "Mentions in Archive", "margin: 0px auto; width: 320px; height: 400px; border: none;"));
+      $('#archiveMentionsPage').page();
+      $.mobile.pageContainer.append(buildPage("archiveHashtagsPage", "archiveHashtagsContainer", "Hastags in the Archive", "margin: 0px auto; width: 320px; height: 400px; border: none;"));
+      $('#archiveHashtagsPage').page();
+      $.mobile.pageContainer.append(buildPage("archiveLinksPage", "archiveLinksContainer", "Links in the Archive", "width: 98%; height: 80%; margin: 0  auto"));
+      $('#archiveLinksPage').page();
+      
       now.getArchiveList(options.ytkURL,function(jsondata){
         if(jsondata.status == "ok"){
           archiveList = jsondata.data[0];
@@ -278,19 +288,20 @@ function handleShowArchivePage(){
   if(options.lastselectedArchive != options.selectedArchive){
     setArchiveInfo(archiveList[options.selectedArchive.id-1], $('#archive_info'));
     updateMsgTotal("-");
+    $('#geoMarkerCount').text("-");
     $('#downloadSliderBox').show();
     $('#downloadSlider').val(0).slider("refresh");
     $('#downloadSliderBox').find('input[type="number"]').hide();
+    //$('#archiveLinksListEntry').hide();
     now.getArchive(options.selectedArchive,function(jsondata){
       if(jsondata.status == "ok"){
         //console.log("ArchiveInfo",jsondata.data);
         currentArchive = jsondata.data;
-        updateMsgTotal(currentArchive.messagesSoFar);
-        $('#geoMarkerCount').text(formatNumber(currentArchive.geoInfo.length));
         if(currentArchive.messagesSoFar == 0){
           popErrorMessage("Selection has no Messages",1500);
           $.mobile.changePage("#welcomePage");
         }
+        checkArchiveParts();
       }else{
         popErrorMessage("Error: "+jsondata.msg+" Can't get Archive",2500);
         //$.mobile.changePage("#ErrorPage");
@@ -318,7 +329,6 @@ $('#browseMessagesCount').text(formatNumber(data.count));
  * Set the download slider to a new position and fade it out if the 
  * download is done. Also update the final amount of downloaded messages.
  * @param {Number} progress A Number between 0-100
- * @param {Number} msgTotal The final amount of downloaded messages
  */
 function updateTheDownloadSlider(progress) {
     $('#downloadSlider').val(progress).slider("refresh");
@@ -327,6 +337,130 @@ function updateTheDownloadSlider(progress) {
     }
 }
 
+
+function checkArchiveParts(){
+  updateMsgTotal(currentArchive.messagesSoFar);
+  
+  if(currentArchive.geoMarker.length != 0){
+    partIsSaved("geoMarker");
+  }
+  if(currentArchive.urls.length != 0){
+     partIsSaved("urls");
+  }
+  if(currentArchive.hashtags.length != 0){
+     partIsSaved("hashtags");
+  }
+  if(currentArchive.mentions.length != 0){
+     partIsSaved("mentions");
+  }
+  if(currentArchive.users.length != 0){
+     partIsSaved("users");
+  }  
+  
+}
+/**
+ * Function that process the ready events that are fired when a 
+ * analyse is done.
+ *
+ */
+function partIsSaved(name,data){
+  console.log("The Part "+name+" is ready.");
+  if(!_.isUndefined(data  )){
+    currentArchive[name] = data;
+    console.log("Setting data: "+name);
+  }
+  switch(name){
+    case "geoMarker" :
+      $('#geoMarkerCount').text(formatNumber(currentArchive.geoMarker.length));
+    break;
+    case "urls" :
+      addUrlChart();
+    break;
+    case "hashtags" :
+       for (var i = 0; i < currentArchive.hashtags.length; i++){
+        currentArchive.hashtags[i].url = "http://search.twitter.com/search?q=%23"+currentArchive.hashtags[i].text.substring(1,currentArchive.hashtags[i].text.length);
+       }
+      $("#archiveHashtagsCount").text(formatNumber(currentArchive.hashtags.length));
+    break;
+    case "mentions" :
+       for (var i = 0; i < currentArchive.mentions.length; i++){
+        currentArchive.mentions[i].url = "http://www.twitter.com/"+currentArchive.mentions[i].text;
+       }
+       
+      $("#archiveMentionsCount").text(formatNumber(currentArchive.mentions.length));
+    break;   
+    case "users" :
+      $.mobile.pageContainer.append(buildPage("archiveUsersPage", "archiveUsersContainer"));
+      
+      $("#archiveUsersCount").text(formatNumber(currentArchive.users.length));
+    break;        
+  }
+}
+
+
+function addUrlChart(){
+  $('#archiveLinksCount').text(formatNumber(currentArchive.urls.length));
+  var chartOptions = {
+    chart: {
+        renderTo: 'archiveLinksContainer',
+        plotBackgroundColor: null,
+        plotBorderWidth: null,
+        plotShadow: false
+    },
+    title: {
+        text: 'Links in the Archive'
+    },
+
+    tooltip: {
+        formatter: function() {
+            return '<b>'+ this.y +'</b> times: '+ this.point.name;
+        }
+    },
+    plotOptions: {
+        pie: {
+            size: '100%',
+            allowPointSelect: true,
+            cursor: 'pointer',
+            
+            dataLabels: {
+                distance: -30,
+                enabled: false,
+                color: '#000000',
+                connectorColor: '#000000',
+                formatter: function() {
+                    return '<b>'+ this.y +'</b> times';
+                }
+            }
+            
+        }
+    },
+    series: []
+  };
+  var series = {
+    type: 'pie',
+    name: 'Links',
+    point: {
+      events: {
+        click: function(e) {
+         this.slice();
+         var clicked = this;
+         setTimeout(function(){
+             location.href = clicked.config[0];
+         }, 500)
+         e.preventDefault();
+        }
+      }
+    },
+    data: []
+  };
+  
+  _.each(_.first(currentArchive.urls, options.showLimit), function(url){
+    series.data.push([ url.text, url.weight]);
+  });
+  chartOptions.series.push(series);
+  
+  chart = new Highcharts.Chart(chartOptions);
+}
 /**
  * Set the right amount of messages to all different places.
  *
@@ -343,54 +477,69 @@ function archiveWidgetsListHandler(event){
   
   if(target == "#mapPage"){
     setUpGeoMarkerForArchive();
-  }else if(target == "#showMsgsPage")
+  }else if(target == "#showMsgsPage"){
+    $.mobile.changePage(target);
+  }else if(target == "#archiveLinksPage"){
+    $.mobile.changePage(target);
+  }else if(target == "#archiveHashtagsPage"){
+    $.mobile.changePage(target);
+    $("#archiveHashtagsContainer").html("");
+    $("#archiveHashtagsContainer").jQCloud(_.first(currentArchive.hashtags, options.showLimit));
+  }else if(target == "#archiveMentionsPage"){
+    $.mobile.changePage(target);
+    $("#archiveHashtagsContainer").html("");
+    $("#archiveMentionsContainer").jQCloud(_.first(currentArchive.mentions, options.showLimit));
+  }else if(target == "#archiveUsersPage"){
     $.mobile.changePage(target);
   }
+}
 
 /**
- * Clear the map,
- * copy the geoMarker from the Server side and put them on the map
+ * Clear the map and put the geoMarker on the map. 
+ *  -a blue for one Person
+ *  -a red one for more Peaple at the same place
  *
  */
 function setUpGeoMarkerForArchive(){
-  now.getGeoMarker(function (data){
-      setUpMap();
-      map.setView(new L.LatLng(51.719444, 8.757222,true), 2);
-      var colorMarker = L.Icon.extend({
-        iconUrl: '',
-        shadowUrl: 'css/images/marker-shadow.png',
-        iconSize: new L.Point(25, 41),
-        shadowSize: new L.Point(41, 41),
-        iconAnchor: new L.Point(22, 94),
-        popupAnchor: new L.Point(-3, -76)
-      });
-      var redMarker = new colorMarker('css/images/marker-red.png');
-      for (var i = 0 ; i < data.length; i++) {
-        var geoM = data[i];
-        // create a marker in the given location and add it to the map
-        var marker;
-        var text ="";
-        //One Message at one place, from one person;
-        if(geoM.users.length == 1 && geoM.users[0].tweets.length == 1){
-          marker = new L.Marker(new L.LatLng(geoM.lat, geoM.long,true));
-          text +="<a href=\"http://twitter.com/#!/"+geoM.users[0].name+"/status/"+geoM.users[0].tweets[0].id+"\" target=\"_blank\">"+geoM.users[0].name+"</a>";
-          //console.log("Simple Marker please",_.values(geoM.messages));
-        }else if(geoM.users.length == 1){
-          marker = new L.Marker(new L.LatLng(geoM.lat, geoM.long,true));
-          text +=" <a href=\"http://twitter.com/#!/"+geoM.users[0].name+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[0].tweets.length,9)+"em;\">"+geoM.users[0].name+"</a> ";
-          //console.log("Simple Marker please",_.values(geoM.messages));
-        }else{
-          marker = new L.Marker(new L.LatLng(geoM.lat, geoM.long,true),{icon:redMarker});
-          for (var k = 0; k < geoM.users.length; k++){
-            text +=" <a href=\"http://twitter.com/#!/"+geoM.users[k].name+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[k].tweets.length,9)+"em;\">"+geoM.users[k].name+"</a> ";
-          }
-        }
-        marker.bindPopup(text,{autoPan:false});  
-        map.addLayer(marker);
-        //console.log("marker",marker);
+  var data = currentArchive.geoMarker;
+  setUpMap();
+  map.setView(new L.LatLng(51.719444, 8.757222,true), 2);
+  var colorMarker = L.Icon.extend({
+    iconUrl: '',
+    shadowUrl: 'css/images/marker-shadow.png',
+    iconSize: new L.Point(25, 41),
+    shadowSize: new L.Point(41, 41),
+    iconAnchor: new L.Point(22, 94),
+    popupAnchor: new L.Point(-3, -76)
+  });
+  var redMarker = new colorMarker('css/images/marker-red.png');
+  for (var i = 0 ; i < data.length; i++) {
+    var geoM = data[i];
+    // create a marker in the given location and add it to the map
+    var marker;
+    var text ="";
+    var pos = new L.LatLng(geoM.lat, geoM.long,true);
+    //One Message at one place, from one person;
+    if(geoM.users.length == 1 && geoM.users[0].tweets.length == 1){
+      marker = new L.Marker(pos);
+      text +="<a href=\"http://twitter.com/#!/"+geoM.users[0].name+"/status/"+geoM.users[0].tweets[0].id+"\" target=\"_blank\">"+geoM.users[0].name+"</a>";
+      //console.log("Simple Marker please",_.values(geoM.messages));
+    }else if(geoM.users.length == 1){
+      marker = new L.Marker(pos);
+      text +=" <a href=\"http://twitter.com/#!/"+geoM.users[0].name+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[0].tweets.length,9)+"em;\">"+geoM.users[0].name+"</a> ";
+      //console.log("Simple Marker please",_.values(geoM.messages));
+    }else{
+      marker = new L.Marker(pos,{icon:redMarker});
+      for (var k = 0; k < geoM.users.length; k++){
+        text +=" <a href=\"http://twitter.com/#!/"+geoM.users[k].name+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[k].tweets.length,9)+"em;\">"+geoM.users[k].name+"</a> ";
       }
-      $.mobile.changePage("#mapPage");
-    });
+    }
+    marker.bindPopup(text,{autoPan:false});  
+    map.addLayer(marker);
+    //console.log("marker",marker);
+  }
+  $.mobile.changePage("#mapPage");
+    
 }
 /**
  * Show Messages Page:
@@ -753,6 +902,24 @@ function getQueryParams(qs) {
   return params;
 }
 
+function buildPage(id, container, header,style){
+var page ='<div data-role="page" id="'+id+'" data-url="'+id+'">';
+ 
+  page +='<div data-role="header">';
+  page +='<a href="#optionsPage" class="ui-btn-right"  data-icon="gear" >Options</a>';
+  page +='  <h1>'+header+'</h1>';
+  page +='</div>';
+ 
+  page +='<div data-role="content" id="'+container+'", style="'+style+'">';
+  page +='</div>';
+ 
+  page +='<div data-role="footer">';
+  page +='<h4>Footer</h4>';
+  page +='</div>';
+page +='</div>';
+
+return page;
+}
  /**
  * A simple check if a String is a url
  * 
@@ -781,5 +948,6 @@ function twapperlizerClientOptions(ytkURL){
   this.addMsgVal=5;
   this.selectedArchive;
   this.lastselectedArchive;
+  this.showLimit = 20;
 }
 
