@@ -5,11 +5,11 @@ _.mixin(require('underscore.string'));
 var unshortener = require('unshortener');
 
 
-/*
-analyser.analyseMesseges(staticData.archiveInfo, function(result){
-  //console.log("result",result);
-});
 
+analyser.analyseMesseges(staticData.archiveInfo, function(result){
+  console.log("result",_.keys(result));
+});
+/*
 
 var user = new Object();
 user.text = "wollepb";
@@ -31,7 +31,14 @@ analyser.expandUrls(staticData.shortUrls, new Array(), function(res){
 
 */
 //console.log("urllib.parse(url)",urllib.parse("http://bi"));
+//console.log("_.isURL(string, [schemas...])",_.isUrl('http://bi'));
+/*
 unshortener.expand("http://bi", function (realUrl) {
   console.log("realUrl",realUrl);
 });
 
+
+var text ='Forschen macht Spaß - Stadt, Heinz Nixdorf MuseumsForum (HNF) und Universität laden vom 18. bis 22. Juni zu... http://bit.ly/kC3GgB http://bit.ly/kdQY5G #upb';
+var regExUrls = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/?[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/g;
+console.log(text.match(regExUrls));
+*/

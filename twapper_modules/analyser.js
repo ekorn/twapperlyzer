@@ -20,7 +20,7 @@ function analyseMesseges(archiveInfo, callback){
   var messages = archiveInfo.tweets;
   var regExUsernames = /(^|\s)@(\w+)/g;
   var regExHashtags  = /(^|\s)#(\w+)/g;
-  var regExUrls = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+  var regExUrls =  /((?:http|https):\/\/[a-z0-9\/\?=_#&%~-]+(\.[a-z0-9\/\?=_#&%~-]+)+)|(www(\.[a-z0-9\/\?=_#&%~-]+){2,})/gi;
   var usernames = new Array();
   var shortUrls = new Array();
   
@@ -74,8 +74,9 @@ function analyseMesseges(archiveInfo, callback){
     });
   }
   */
-  //archiveInfo.urls = expandUrls(shortUrls, archiveInfo.urls, callback);
-
+  
+  archiveInfo.urls = expandUrls(shortUrls, archiveInfo.urls, callback);
+  
 
 
 }
@@ -89,7 +90,13 @@ function analyseMesseges(archiveInfo, callback){
 function expandUrls(shortUrls, realUrls, callback){
   var urlCount = 0;
   _.each(shortUrls, function(shortUrl){
-    unshortener.expand(shortUrl.text, function (realUrl) {
+    
+    if(shortUrl.text.length<25){
+      unshortener.expand(shortUrl.text, handleRealURL );
+    }else{
+      handleRealURL({href:shortUrl.text});
+    }
+    function handleRealURL(realUrl){
       // url is a url object
       urlCount++;
       realUrls = aggrigateData(realUrls, new Array(realUrl.href), shortUrl.weight);
@@ -99,21 +106,16 @@ function expandUrls(shortUrls, realUrls, callback){
         response.urls = realUrls;
         callback(response);
         return realUrls;
+        
       }
         
-    });
+    }
   });
 }
 
 function getDataFromTextToArray(regEx, text, target){
     var tmpData = text.match(regEx);
-    var bi = _.detect(tmpData, function(dat){
-      return dat == "http://bi";
-      });
-       
-    if(!_.isUndefined(bi)){
-      console.log("text", text,"zu", tmpData);
-    }
+
     if(tmpData != null){
       return aggrigateData(target, tmpData);
     }
