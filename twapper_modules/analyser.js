@@ -23,8 +23,6 @@ function analyseMesseges(archiveInfo, callback){
   var regExUrls = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
   var usernames = new Array();
   var shortUrls = new Array();
-  var urlCount = 0;
-
   
   for (var i = 0; i < messages.length; i++){
     
@@ -75,7 +73,12 @@ function analyseMesseges(archiveInfo, callback){
       }
     });
   }
- */ 
+  */
+  //archiveInfo.urls = expandUrls(shortUrls, archiveInfo.urls, callback);
+
+
+
+}
 
 /* every short URL has to be expanded cause maybe serval short ones lead 
  * to the same real url. By first aggregate the short urls, expand it and
@@ -83,17 +86,19 @@ function analyseMesseges(archiveInfo, callback){
  * expanding urls.
  * 
  */
+function expandUrls(shortUrls, realUrls, callback){
+  var urlCount = 0;
   _.each(shortUrls, function(shortUrl){
     unshortener.expand(shortUrl.text, function (realUrl) {
       // url is a url object
       urlCount++;
-      archiveInfo.urls = aggrigateData(archiveInfo.urls, new Array(realUrl.href), shortUrl.weight);
-
+      realUrls = aggrigateData(realUrls, new Array(realUrl.href), shortUrl.weight);
       if(urlCount == shortUrls.length){
-        archiveInfo.urls = (_.sortBy(archiveInfo.urls, function(url){return url.weight})).reverse();
+        realUrls = (_.sortBy(realUrls, function(url){return url.weight})).reverse();
         var response = new Object();
-        response.urls = archiveInfo.urls;
+        response.urls = realUrls;
         callback(response);
+        return realUrls;
       }
         
     });
@@ -102,6 +107,13 @@ function analyseMesseges(archiveInfo, callback){
 
 function getDataFromTextToArray(regEx, text, target){
     var tmpData = text.match(regEx);
+    var bi = _.detect(tmpData, function(dat){
+      return dat == "http://bi";
+      });
+       
+    if(!_.isUndefined(bi)){
+      console.log("text", text,"zu", tmpData);
+    }
     if(tmpData != null){
       return aggrigateData(target, tmpData);
     }
@@ -318,3 +330,4 @@ function getNamesToGender(fileName, callback){
 exports.analyseMesseges = analyseMesseges;
 exports.getUserInfo = getUserInfo;
 exports.getNamesToGender = getNamesToGender;
+exports.expandUrls = expandUrls;
