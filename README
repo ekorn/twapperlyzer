@@ -1,0 +1,5 @@
+Twapperlyzer is divided in two parts:
+ - one is responsible for download and aggregating data this is a node.js program
+ - the other one is presenting the data, this one is a couchapp
+
+ 
