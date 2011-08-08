@@ -5,7 +5,7 @@
   , "dependencies": {
       "express": "2.3.11"
     , "jade": ">= 0.0.1"
-    , "now": "0.6.1"
+    , "validator": >= "0.2.6"
     , "config": ">=0.4.2"
     , "cradle": ">=0.5.5"    
     , "oauth": ">=0.9.3"  

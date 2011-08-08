@@ -20,7 +20,6 @@ var ytk = require('./twapper_modules/yourTwapperkeeper.js');
 var conf = require('config');
 var check = require('validator').check;
 var sanitize = require('validator').sanitize;
-var async = require('async');
 
 var app = module.exports = express.createServer();
 
