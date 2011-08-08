@@ -44,7 +44,15 @@ var getJSON = function (url,callback){
   });
 }
 
+var regExUrls =  /((?:http|https):\/\/[a-z0-9\/\?=_#&%~-]+(\.[a-z0-9\/\?=_#&%~-]+)+)|(www(\.[a-z0-9\/\?=_#&%~-]+){2,})/gi;
+
+function isURL(str){
+  return regExUrls.test(str);
+}
+
 
 //Module exports
 exports.getJSON = getJSON;
 exports.ResponseBean = ResponseBean;
+exports.regExUrls = regExUrls;
+exports.isURL = isURL

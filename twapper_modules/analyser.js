@@ -20,7 +20,7 @@ function analyseMesseges(archiveInfo, callback){
   var messages = archiveInfo.tweets;
   var regExUsernames = /(^|\s)@(\w+)/g;
   var regExHashtags  = /(^|\s)#(\w+)/g;
-  var regExUrls =  /((?:http|https):\/\/[a-z0-9\/\?=_#&%~-]+(\.[a-z0-9\/\?=_#&%~-]+)+)|(www(\.[a-z0-9\/\?=_#&%~-]+){2,})/gi;
+  
   var usernames = new Array();
   var shortUrls = new Array();
   
@@ -33,7 +33,7 @@ function analyseMesseges(archiveInfo, callback){
     
     archiveInfo.hashtags = getDataFromTextToArray(regExHashtags, messages[i].text, archiveInfo.hashtags);
     
-    shortUrls = getDataFromTextToArray(regExUrls, messages[i].text, shortUrls);
+    shortUrls = getDataFromTextToArray(helper.regExUrls, messages[i].text, shortUrls);
     
     usernames = aggrigateData(usernames, new Array(messages[i].from_user));
 
@@ -45,16 +45,21 @@ function analyseMesseges(archiveInfo, callback){
   response.geoMarker = archiveInfo.geoMarker;
 
   archiveInfo.hashtags = _.reject(archiveInfo.hashtags, function(hashtag){
-    return (hashtag.text == archiveInfo.archive_info.keyword);
+    return (hashtag.text.toLowerCase() == archiveInfo.archive_info.keyword.toLowerCase() );
   }); 
   archiveInfo.hashtags = (_.sortBy(archiveInfo.hashtags, function(entry){return entry.weight})).reverse();
   response.hashtags = archiveInfo.hashtags;
 
   _.each(archiveInfo.mentions, function(username){
-    username.text = username.text.substring(1, username.text.length);
+    if(username.text.charAt(0) == "@"){
+      username.text = username.text.substring(1, username.text.length);
+    }
+
   });
   archiveInfo.mentions = (_.sortBy(archiveInfo.mentions, function(entry){return entry.weight})).reverse();
   response.mentions = archiveInfo.mentions;
+
+  response.messagesSoFar = archiveInfo.messagesSoFar + messages.length;
 
   callback(response);  
 
@@ -73,13 +78,12 @@ function analyseMesseges(archiveInfo, callback){
       }
     });
   }
+  
   */
-  
   archiveInfo.urls = expandUrls(shortUrls, archiveInfo.urls, callback);
-  
-
 
 }
+
 
 /* every short URL has to be expanded cause maybe serval short ones lead 
  * to the same real url. By first aggregate the short urls, expand it and
