@@ -94,25 +94,28 @@ function analyseMesseges(archiveInfo, callback){
 function expandUrls(shortUrls, realUrls, callback){
   var urlCount = 0;
   _.each(shortUrls, function(shortUrl){
-    
-    if(shortUrl.text.length<25){
-      unshortener.expand(shortUrl.text, handleRealURL );
-    }else{
-      handleRealURL({href:shortUrl.text});
-    }
-    function handleRealURL(realUrl){
-      // url is a url object
-      urlCount++;
-      realUrls = aggrigateData(realUrls, new Array(realUrl.href), shortUrl.weight);
-      if(urlCount == shortUrls.length){
-        realUrls = (_.sortBy(realUrls, function(url){return url.weight})).reverse();
-        var response = new Object();
-        response.urls = realUrls;
-        callback(response);
-        return realUrls;
-        
+    try{
+      if(shortUrl.text.length<25){
+        unshortener.expand(shortUrl.text, handleRealURL );
+      }else{
+        handleRealURL({href:shortUrl.text});
       }
-        
+      function handleRealURL(realUrl){
+        // url is a url object
+        urlCount++;
+        realUrls = aggrigateData(realUrls, new Array(realUrl.href), shortUrl.weight);
+        if(urlCount == shortUrls.length){
+          realUrls = (_.sortBy(realUrls, function(url){return url.weight})).reverse();
+          var response = new Object();
+          response.urls = realUrls;
+          callback(response);
+          return realUrls;
+          
+        }
+          
+      }
+    }catch(e){
+      console.log("expandUrl : "+shortUrl.text, e);
     }
   });
 }
