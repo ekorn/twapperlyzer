@@ -5,7 +5,7 @@ var userOptions;
 var config;
 var currentArchive;
 var archiveList;
-var mydb = $.couch.db(document.location.href.split('/')[3] || "twapperlyzer");
+var mydb;
 
 $(window).load(function(){ $(document).ready(function() {
   
@@ -13,7 +13,7 @@ $(window).load(function(){ $(document).ready(function() {
  * Loading and setting options:
  *
  */
- 
+  mydb = $.couch.db(document.location.href.split('/')[3] || "twapperlyzer");
   mydb.changes().onChange(function(changes) {
     _.each(changes.results, function(change){
       if(change.id == "config"){
