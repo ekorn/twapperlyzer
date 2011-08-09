@@ -437,6 +437,11 @@ function showArchivePageHandler(){
     setArchiveInfo(archiveList[userOptions.selectedArchive.id-1], $('#archive_info'));
     updateMsgTotal("-");
     $('#geoMarkerCount').text("-");
+    $('#archiveLinksCount').text("-");
+    $('#archiveHashtagsCount').text("-");
+    $('#archiveMentionsCount').text("-");
+    $('#archiveUsersCount').text("-");
+    
     $('#downloadSliderBox').show();
     $('#downloadSlider').val(0).slider("refresh");
     $('#downloadSliderBox').find('input[type="number"]').hide();
@@ -529,7 +534,7 @@ function checkArchiveParts(){
  */
 function partIsSaved(name,data){
   console.log("The Part "+name+" is ready.");
-  if(!_.isUndefined(data  )){
+  if(!_.isUndefined(data)){
     currentArchive[name] = data;
     console.log("Setting data: "+name);
   }
@@ -563,6 +568,7 @@ function partIsSaved(name,data){
 
 
 function addUrlChart(){
+  $('#archiveLinksContainer').html('');
   $('#archiveLinksCount').text(formatNumber(currentArchive.urls.length));
   var chartOptions = {
     chart: {

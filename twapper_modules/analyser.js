@@ -120,7 +120,7 @@ function expandUrls(shortUrls, realUrls, callback){
         sendResponse();
       }else{
         clearTimeout(timeoutid);
-        timeoutid = setTimeout(sendResponse, 5000);
+        timeoutid = setTimeout(sendResponse, 10000);
       }
     }
     
