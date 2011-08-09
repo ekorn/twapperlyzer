@@ -93,31 +93,54 @@ function analyseMesseges(archiveInfo, callback){
  */
 function expandUrls(shortUrls, realUrls, callback){
   var urlCount = 0;
+  var lastPercentCount = 0;
+  var realUrls;
+  var timeoutid;
   _.each(shortUrls, function(shortUrl){
-    try{
-      if(shortUrl.text.length<25){
+    if(shortUrl.text.length<30){
+      try{
         unshortener.expand(shortUrl.text, handleRealURL );
+      }catch(e){
+        console.log("unshortener.expand : "+shortUrl.text, e);
+      }
+    }else{
+      handleRealURL({href:shortUrl.text});
+    }
+    function handleRealURL(realUrl){
+      // url is a url object
+      urlCount++;
+      realUrls = aggrigateData(realUrls, new Array(realUrl.href), shortUrl.weight);
+      var currentPercentige = getProgessInPercent(urlCount,shortUrls.length);
+      
+      if(currentPercentige > lastPercentCount){
+        console.log("got "+urlCount+" of "+shortUrls.length+" ("+currentPercentige+"%) of the URLs");
+        lastPercentCount = currentPercentige;
+      }
+      if(urlCount == shortUrls.length){
+        sendResponse();
       }else{
-        handleRealURL({href:shortUrl.text});
+        clearTimeout(timeoutid);
+        timeoutid = setTimeout(sendResponse, 5000);
       }
-      function handleRealURL(realUrl){
-        // url is a url object
-        urlCount++;
-        realUrls = aggrigateData(realUrls, new Array(realUrl.href), shortUrl.weight);
-        if(urlCount == shortUrls.length){
-          realUrls = (_.sortBy(realUrls, function(url){return url.weight})).reverse();
-          var response = new Object();
-          response.urls = realUrls;
-          callback(response);
-          return realUrls;
-          
-        }
-          
-      }
-    }catch(e){
-      console.log("expandUrl : "+shortUrl.text, e);
+    }
+    
+    function sendResponse(){
+      realUrls = (_.sortBy(realUrls, function(url){return url.weight})).reverse();
+      var response = new Object();
+      response.urls = realUrls;
+      callback(response);
     }
   });
+}
+
+
+/**
+ * calulate the percentage of something
+ * @param {Number} percentage
+ * @param {Number} base
+ */
+function getProgessInPercent(percentage,base){
+  return Math.floor((percentage/(base/100)));
 }
 
 function getDataFromTextToArray(regEx, text, target){

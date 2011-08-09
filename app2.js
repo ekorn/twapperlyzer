@@ -151,7 +151,7 @@ function analyseArchiveHandler(req, res){
                 archiveInfo.tweets = tweetRamStore;
                 analyseAndUpdate(archiveInfo, dbToSave);
                 //Inform the client
-                var urlToDoc = urlToDoc = "http://"+connection.host+":"+connection.port+"/"+dbToSave.name+"/"+result.id;
+                var urlToDoc = "http://"+connection.host+":"+connection.port+"/"+dbToSave.name+"/"+result.id;
                 
                 result.status = "ok";
                 result.url = urlToDoc;
@@ -292,18 +292,13 @@ function createOrUpdateArchiveHandler(req, res){
 function analyseAndUpdate(archiveInfo, currentDB){
   analyser.analyseMesseges(archiveInfo, function(result){
     //Update the DB
-    try{
-      currentDB.merge(archiveInfo._id, result, function (err, res) {
-         if (!res)
-          console.log(err,_.keys(result));
-          else{
-            console.log("Document updated with",_.keys(result));
-          }
-      });
-    }catch (e) {
-      console.log("CurrentDB.merge ",e.stack);
-      throw e;
-    }
+    currentDB.merge(archiveInfo._id, result, function (err, res) {
+       if (!res)
+        console.log(err,_.keys(result));
+        else{
+          console.log("Document updated with",_.keys(result));
+        }
+    });
   });  
 }
 

@@ -5,11 +5,11 @@ _.mixin(require('underscore.string'));
 var unshortener = require('unshortener');
 
 
-
+/*
 analyser.analyseMesseges(staticData.archiveInfo, function(result){
   console.log("result",_.keys(result));
 });
-/*
+
 
 var user = new Object();
 user.text = "wollepb";
@@ -42,3 +42,7 @@ var text ='Forschen macht Spaß - Stadt, Heinz Nixdorf MuseumsForum (HNF) und Un
 var regExUrls = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/?[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/g;
 console.log(text.match(regExUrls));
 */
+
+unshortener.expand("http://cscw2011wiki.org/", function (realUrl) {
+  console.log("realUrl",realUrl);
+});
