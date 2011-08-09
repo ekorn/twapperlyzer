@@ -292,13 +292,18 @@ function createOrUpdateArchiveHandler(req, res){
 function analyseAndUpdate(archiveInfo, currentDB){
   analyser.analyseMesseges(archiveInfo, function(result){
     //Update the DB
-    currentDB.merge(archiveInfo._id, result, function (err, res) {
-       if (!res)
-        console.log(err,_.keys(result));
-        else{
-          console.log("Document updated with",_.keys(result));
-        }
-    });
+    try{
+      currentDB.merge(archiveInfo._id, result, function (err, res) {
+         if (!res)
+          console.log(err,_.keys(result));
+          else{
+            console.log("Document updated with",_.keys(result));
+          }
+      });
+    }catch (e) {
+      console.log("CurrentDB.merge ",e.stack);
+      throw e;
+    }
   });  
 }
 
