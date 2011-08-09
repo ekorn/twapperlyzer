@@ -5,7 +5,7 @@ var userOptions;
 var config;
 var currentArchive;
 var archiveList;
-var mydb = $.couch.db(document.location.href.split('/')[3] || "twapperlyzer2");
+var mydb = $.couch.db(document.location.href.split('/')[3] || "twapperlyzer");
 
 $(window).load(function(){ $(document).ready(function() {
   

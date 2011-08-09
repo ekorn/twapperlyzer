@@ -10,10 +10,15 @@
       "maxMessages": 500
     },
     "couchdb": {
-      "host": "localhost",
+      "host": "",
       "port": "5984",
-      "username": "",
-      "password": "",
+      "options":{
+        "secure": "false",
+        "auth": {
+          "username": "",
+          "password": ""
+          }
+      },
       "dbname": "twapperlyzer"
     }
   }

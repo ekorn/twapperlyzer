@@ -2,4 +2,16 @@ Twapperlyzer is divided in two parts:
  - one is responsible for download and aggregating data this is a node.js program
  - the other one is presenting the data, this one is a couchapp
 
- 
+to get it working clone the git repository at https://github.com/ekorn/twapperlyzer
+cd twapperlyzer
+npm install -d
+npm install forever -g
+npm install couchapp -g
+cd config
+cp default_template.json default.json
+adjust default.json
+cd..
+forever start app2.js
+cd viewer 
+couchapp push app.js url
+create the couch config
