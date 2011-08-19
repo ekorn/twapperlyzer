@@ -105,10 +105,10 @@ console.log('Twaperlizer server listening on port http://0.0.0.0:%d', app.addres
  */
 function getArchiveListHandler(req, res){
   try {
-    check(req.query.ytkURL,"Parameter error: in ytkURL").notNull().isUrl();
+    check(req.query.ytkUrl,"Parameter error: in ytkUrl").notNull().isUrl();
     if(exist(req.query.callback)) check(req.query.callback).notEmpty();
     
-    ytk.getArchiveList(req.query.ytkURL,function(jsondata){
+    ytk.getArchiveList(req.query.ytkUrl,function(jsondata){
       sendJSON(req, res, jsondata);
     });
   } catch (e) {
@@ -187,7 +187,7 @@ function updateArchiveHandler(req, res){
     if(exist(req.query.dbUser)) check(req.query.dbUser).notEmpty();
     if(exist(req.query.dbPw)) check(req.query.dbPw).notEmpty();
     if(exist(req.query.dbSecure)) check(req.query.dbSecure).isBoolean();
-    if(exist(req.query.dbPort)) check(req.query.dbPort).isNumber(); else req.query.dbPort = 5984;
+    if(exist(req.query.dbPort)) check(req.query.dbPort).isInt(); else req.query.dbPort = 5984;
   }
   getDBConnection(req.query, function(error, dbToSave, connection){
     if(error != null){
@@ -197,13 +197,14 @@ function updateArchiveHandler(req, res){
       dbToSave.get(req.query.docID, function (err, archiveInfoFromDB) {
         if (err == null){
           req.query.id = archiveInfoFromDB.archive_info.id;
-          req.query.ytkURL = archiveInfoFromDB.ytkURL;
+          req.query.ytkUrl = archiveInfoFromDB.ytkUrl;
+            //console.log("updateArchiveHandler",req.query.ytkUrl,archiveInfoFromDB.ytkUrl);
           var selectedArchive = ytk.createSelectedArchiveObject(req.query);
           
           ytk.getArchive(selectedArchive, archiveInfoFromDB.messagesSoFar, function(archive){
             if(archive.status == "ok"){
               archiveInfoFromDB.tweets = archive.data.tweets;
-              archiveInfoFromDB.archive_info.count = archive.data.tweets.length;
+              archiveInfoFromDB.archive_info.count = archive.data.archive_info.count;
               analyseAndUpdate(archiveInfoFromDB, dbToSave);
               var updating = new helper.ResponseBean();
               updating.status = "ok";
@@ -238,13 +239,13 @@ function updateArchiveHandler(req, res){
 
 function getMsgsHandler(req, res){
   try {
-    check(req.query.ytkURL, "Parameter error: in URL").isUrl();
+    check(req.query.ytkUrl, "Parameter error: in URL").isUrl();
     check(req.query.l, "Parameter error: in limit").isInt();
     check(req.query.id, "Parameter error: in id").isInt();
     if(exist(req.query.lastID)) check(req.query.lastID).isInt();
     if(exist(req.query.callback)) check(req.query.callback).notEmpty();
     
-    ytk.getMsgs (req.query.lastID, req.query.l,req.query.ytkURL,req.query.id, function(messages){
+    ytk.getMsgs (req.query.lastID, req.query.l,req.query.ytkUrl,req.query.id, function(messages){
       sendJSON(req, res, messages);
     }); 
   } catch (e) {
@@ -255,8 +256,6 @@ function getMsgsHandler(req, res){
 
 function createOrUpdateArchiveHandler(req, res){
   //console.log("I got",req.url);
-  var myDateRegEx = /([0-9]{4})-([0-1]{0,1}[0-9]{1})-([0-3]{0,1}[0-9]{1})/;
-  // The expression is quite bad bit it is better than nothing
   try {
     parameterCheck(req);
     //Parameter check done
@@ -265,7 +264,7 @@ function createOrUpdateArchiveHandler(req, res){
       if(error != null){
         sendError(req, res, error);
       }else{
-        var docID = getDocID(req.query.ytkURL, req.query.id);
+        var docID = getDocID(req.query.ytkUrl, req.query.id);
         dbToSave.get(docID, function (err, archiveInfoFromDB) {
           if (err != null){
             if(err.error == "not_found"){
@@ -303,7 +302,10 @@ function analyseAndUpdate(archiveInfo, currentDB){
 }
 
 function parameterCheck(req){
-    check(req.query.ytkURL, "Parameter error: in URL").isUrl();
+    var myDateRegEx = /([0-9]{4})-([0-1]{0,1}[0-9]{1})-([0-3]{0,1}[0-9]{1})/;
+    // The expression is quite bad bit it is better than nothing
+  
+    check(req.query.ytkUrl, "Parameter error: in URL").isUrl();
     check(req.query.l, "Parameter error: in limit").isInt();
     check(req.query.id, "Parameter error: in id").isInt();
     if(exist(req.query.nort)) check(req.query.nort).isAlpha();
@@ -322,28 +324,28 @@ function parameterCheck(req){
       if(exist(req.query.dbUser)) check(req.query.dbUser).notEmpty();
       if(exist(req.query.dbPw)) check(req.query.dbPw).notEmpty();
       if(exist(req.query.dbSecure)) check(req.query.dbSecure).isBoolean();
-      if(exist(req.query.dbPort)) check(req.query.dbPort).isNumber(); else req.query.dbPort = 5984;
+      if(exist(req.query.dbPort)) check(req.query.dbPort).isInt(); else req.query.dbPort = 5984;
     }
     //Parameter check done
 }
-function getDocID(ytkURL, id){
+function getDocID(ytkUrl, id){
   var md5sum = crypto.createHash('md5');
-  md5sum.update(ytkURL);
+  md5sum.update(ytkUrl);
   
   return md5sum.digest('hex')+"-"+id;
 }
 
 function createBasicArchiveInfo(selectedArchive, archive){
   var doc = new Object();
-  //doc._id = selectedArchive.ytkURL+"/"+selectedArchive.id;
-  doc._id = getDocID(selectedArchive.ytkURL, selectedArchive.id)
+  //doc._id = selectedArchive.ytkUrl+"/"+selectedArchive.id;
+  doc._id = getDocID(selectedArchive.ytkUrl, selectedArchive.id)
   
   doc.archive_info = archive.archive_info;
   doc.messagesSoFar = 0;
   doc.timestamp = new Date();
   doc.lastMessage = 0;
   doc.isSearch = selectedArchive.isSearch;
-  doc.ytkURL = selectedArchive.ytkURL;
+  doc.ytkUrl = selectedArchive.ytkUrl;
   //fields for analyses
   doc.urls = new Array();
   doc.geoMarker = new Array();
@@ -426,7 +428,6 @@ function getDBParamsFromParams(params){
 function getDBConnection(params, callback){
   if(exist(params.dbHost)){
     var dbConf = getDBParamsFromParams(params);
-    console.log("dbConf",dbConf);
     if(dbConf.host != conf.couchdb.host || dbConf.dbname != conf.couchdb.dbname){
       getDBConnectionFromConfig(dbConf,callback);
     }

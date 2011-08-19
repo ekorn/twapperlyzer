@@ -6,6 +6,7 @@ var conf = require('config');
 var apiListArchives = "/apiListArchives.php";
 var apiGetTweets =  "/apiGetTweets.php";
 var archivesListsCache = new Array();
+var archivesListsCacheTime = new Array();
 
 /**
  * Load the selectedArchive from the net, after getting the archive info and the 
@@ -17,12 +18,12 @@ var archivesListsCache = new Array();
  * @param {Function} callback(`ResponseBean`) Comes from the getArchive function.
  */
 function getArchive(selectedArchive, messagesSoFar, callback){
-  
+  //console.log("try to get Archive",selectedArchive, messagesSoFar);
   if(messagesSoFar != null){
     selectedArchive.limit = selectedArchive.limit - messagesSoFar;
   }
   if(selectedArchive.limit >0){
-    var url = selectedArchive.ytkURL+apiGetTweets+selectedArchive.url+'&l='+Math.min(selectedArchive.limit,conf.twapperlyzer.maxMessages);
+    var url = selectedArchive.ytkUrl+apiGetTweets+selectedArchive.url+'&l='+Math.min(selectedArchive.limit,conf.twapperlyzer.maxMessages);
     //Get the First results to show the user something
     helper.getJSON(url,function(jsondata){
       if(jsondata.status == "ok"){
@@ -78,7 +79,7 @@ function getMoreMsgs(selectedArchive, firstPartOfArchive, callback){
     firstPartOfArchive.data.tweets.pop();
     urlLimit++;
     
-    var url = selectedArchive.ytkURL+apiGetTweets+selectedArchive.url+"&l="+urlLimit+"&max_id="+selectedArchive.max_id;
+    var url = selectedArchive.ytkUrl+apiGetTweets+selectedArchive.url+"&l="+urlLimit+"&max_id="+selectedArchive.max_id;
     helper.getJSON(url,function(jsondata){
           if(jsondata.status == "ok"){
             firstPartOfArchive.status = jsondata.status;
@@ -109,8 +110,8 @@ function getMoreMsgs(selectedArchive, firstPartOfArchive, callback){
  * @param {String} url;
  * @param {Function} callback(`Array`)
  */
-function getMsgs (lastID, limit,ytkURL,id, callback){
-  var url = ytkURL+apiGetTweets+"?id="+id+"&l="+limit;
+function getMsgs (lastID, limit,ytkUrl,id, callback){
+  var url = ytkUrl+apiGetTweets+"?id="+id+"&l="+limit;
   if(lastID != 0){
     url+="&max_id="+lastID;
   }
@@ -122,16 +123,34 @@ function getMsgs (lastID, limit,ytkURL,id, callback){
 /**
  * Load the archive list from the net and send it to the client
  *
- * @param {String} ytkURL The url of the YourTwapperKeeper instance
+ * @param {String} ytkUrl The url of the YourTwapperKeeper instance
  * @param {Function} callback(`ResponseBean`)
  */
-function getArchiveList (ytkURL, callback){
-    helper.getJSON(ytkURL+apiListArchives,function(jsondata){
-      callback(jsondata);
-      if(jsondata.status == "ok"){
-        archivesListsCache[ytkURL] = jsondata.data[0];
-      }
-    });
+function getArchiveList (ytkUrl, callback){
+
+  var getFromNet=false;
+  if(!_.isUndefined(archivesListsCacheTime[ytkUrl])){
+    if((new Date).getTime() - archivesListsCacheTime[ytkUrl].getTime() > conf.twapperlyzer.archivesListsCacheTime){
+      getFromNet = true;
+    }else{getFromNet = false;}
+  }else{getFromNet = true;}
+   
+   if(getFromNet){
+   helper.getJSON(ytkUrl+apiListArchives,function(jsondata){
+        jsondata.data = jsondata.data[0];
+        callback(jsondata);
+        if(jsondata.status == "ok"){
+          archivesListsCache[ytkUrl] = jsondata.data;
+          archivesListsCacheTime[ytkUrl] = new Date;
+        }
+      });
+  }else{
+    var responseBean = new helper.ResponseBean();
+    responseBean.status = "ok";
+    responseBean.data = archivesListsCache[ytkUrl];
+    console.log("archivesListsCache hit for "+ytkUrl);
+    callback(responseBean);
+  }
 };
  
 
@@ -149,7 +168,7 @@ function gettingArchiveFaild(err, callback){
 /**
  * transform a array to a selected archive object that always include
  * - the id
- * - the ytkURL
+ * - the ytkUrl
  * - if it is a search
  *
  * @param {Array} array
@@ -157,7 +176,7 @@ function gettingArchiveFaild(err, callback){
  */
 function createSelectedArchiveObject(params){
   var res = new Object();
-  res.ytkURL = params.ytkURL;
+  res.ytkUrl = params.ytkUrl;
   res.id = params.id;
   res.url = "?id="+params.id;
   res.isSearch = false;

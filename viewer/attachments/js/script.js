@@ -1,70 +1,47 @@
 var $_GET = getQueryParams(document.location.search);
 var map;
 var chart;
-var userOptions;
+var userOptions = {};
 var config;
-var currentArchive;
-var archiveList;
 var mydb;
+var twapperSession = new Object(); //The temporary variable where all the session data is stored
+twapperSession.archiveList;
+twapperSession.archives = [];
 
-$(window).load(function(){ $(document).ready(function() {
   
+$(window).load(function(){ 
+  $(document).ready(function() {
+  $.mobile.showPageLoadingMsg();
 /**
  * Loading and setting options:
  *
  */
-  mydb = $.couch.db(document.location.href.split('/')[3] || "twapperlyzer");
-  mydb.changes().onChange(function(changes) {
-    _.each(changes.results, function(change){
-      if(change.id == "config"){
-        mydb.openDoc("config",  
-          {success: 
-            function(data) {
-              console.log("config Update");
-              config = data;
-            }
-          }
-        ); 
-      }
-      if(currentArchive != null && change.id == currentArchive._id){
-        mydb.openDoc(currentArchive._id,  
-          {success: 
-            function(data) {
-              currentArchive = data; 
-              checkArchiveParts();
-            }
-          }
-        );
-      }
-      //Other Docs to watch
-    });
-  });
-  
-  
-  
+ 
+ //It will take the dbname out of the addressbar or if a vhost is used 
+ //the  a rewrite rule set up in the couchdb 
+  mydb = $.couch.db(document.location.href.split('/')[3] || "dbname");
+  createPages();
+
+if(!_.isUndefined($_GET.laid)){
+  createArchivePage($_GET.laid);
+}
+
   //Loading the different configs
   mydb.openDoc("config",  
     {success: 
       function(configFromDb) {
         config = configFromDb;
-      //if(typeof $_GET.ytkURL != 'undefined')
+      //if(typeof $_GET.ytkUrl != 'undefined')
       loadUserConfig(function(err, result){
+        $.mobile.hidePageLoadingMsg();
         if(err != null){
-          popErrorMessage("could not load user config",1500);
-          $.mobile.changePage("#optionsPage");
+          popErrorMessage("could not load user config: "+err+". Check you Options",3500);
+          //$.mobile.changePage("#optionsPage");
         }
       });
       }
     }
   ); 
-
-  $.mobile.pageContainer.append(buildPage("archiveMentionsPage", "archiveMentionsContainer", "Mentions in Archive", "margin: 0px auto; width: 320px; height: 400px; border: none;"));
-  $('#archiveMentionsPage').page();
-  $.mobile.pageContainer.append(buildPage("archiveHashtagsPage", "archiveHashtagsContainer", "Hastags in the Archive", "margin: 0px auto; width: 320px; height: 400px; border: none;"));
-  $('#archiveHashtagsPage').page();
-  $.mobile.pageContainer.append(buildPage("archiveLinksPage", "archiveLinksContainer", "Links in the Archive", "width: 98%; height: 80%; margin: 0  auto"));
-  $('#archiveLinksPage').page();
-
 
 /**
  * Event binding for the JQM Pages
@@ -85,34 +62,33 @@ $(window).load(function(){ $(document).ready(function() {
   });
   $('#clearUserConfigButton').click(clearUserConfigHandler)
   
+  //localArchives Page
+  $('#localArchivesPage').live('pagebeforeshow',localArchivesPageHandler);
+  $('#localArchiveList').delegate('a', 'click', selectedArchiveByList);
+  
   //list Archives Page 
   $('#listArchivesPage').live('pagebeforeshow',listArchivesPageHandler);
   $('#archivesList').delegate('a', 'click', selectedArchiveByList);
 
   
-  // Show Archive Page
-  $('#showArchivePage').live('pagebeforeshow',showArchivePageHandler);
-  //FIXME actually I want to bind it with showMsgsPage but it won't work
-  $(document).bind("scrollstop", loadMsgAtPageEnd);
-  //now.updateDowloadSlider = updateTheDownloadSlider;
-  //now.partIsSaved = partIsSaved;
-  $('#archiveWidgetsList').delegate('a', 'click', archiveWidgetsListHandler);
-  
   $("#debugButton").click(function(){
-    console.log("USELESS Buttons");
+    console.log("Useless");
+    setUpChangesFeed();
+//END
   });
     
   // Show Msg Page
  
-  $('#showMsgsPage').live('pagebeforeshow',showMessagePageHandler);
-  $("#moreMsgsButton").click(moreMsgsButtonHandler);
   //Copy the coordinates from the link and prepare the map
   $('#msgList').delegate('a', 'click', exportMessageEntry);
 
 //UNSORTED
-
+      $(document).bind("scrollstop", loadMsgAtPageEnd);
 
 //===============END OF DOC READY===============
+
+//The very last thing to do is load the changes feed so webkit can be sure that the site is alredy fully loaded
+setTimeout(setUpChangesFeed, 500);
 });});
 
 
@@ -121,18 +97,144 @@ $(window).load(function(){ $(document).ready(function() {
  *
  */
 
+function setUpChangesFeed(){
+  mydb.changes().onChange(function(changes) {
+    _.each(changes.results, function(change){
+      if(change.id == "config"){
+        mydb.openDoc("config",  
+          {success: 
+            function(data) {
+              console.log("config Update");
+              config = data;
+            }
+          }
+        ); 
+      }
+      var archiveIdThatChanged = _.detect(_.keys(twapperSession.archives) , function(archiveId){
+          return change.id == archiveId;
+        });
+      
+      if(!_.isUndefined(archiveIdThatChanged)){
+        mydb.openDoc(archiveIdThatChanged,  
+          {success: 
+            function(data) {
+              twapperSession.archives[archiveIdThatChanged] = data; 
+              checkArchiveParts(data);
+            }
+          }
+        );
+      }
+      //Other Docs to watch
+    });
+  });
+}
 
 
+function createPages(){
+  
+  //Helper Functions
+  Handlebars.registerHelper("formatEpochTime", function(time){
+    return new Date(time*1000);//It is in Epoch time, so sec not milisec
+  });
+  Handlebars.registerHelper("htmlLinksForText", getHTMLLinksForText);
+  Handlebars.registerHelper("formatNumber", formatNumber);
+  
+  //Compile Templates
+  twapperSession.templates = {};
+  twapperSession.templates.page = Handlebars.compile( $("#page").html() );
+  twapperSession.templates.normalHeader = Handlebars.compile( $("#normalHeader").html() );
+  twapperSession.templates.msgEntryTemplate = Handlebars.compile( $("#msgEntryTemplate").html() );
+  twapperSession.templates.listContent = Handlebars.compile( $("#listContent").html() );
+  twapperSession.templates.archivePageContent = Handlebars.compile( $("#archivePageContent").html() );
+  twapperSession.templates.widgetListTemplate = Handlebars.compile( $("#widgetListTemplate").html() );
+  twapperSession.templates.archiveListElements = Handlebars.compile( $("#archiveListElements").html());
+  twapperSession.templates.archiveLocalListElements = Handlebars.compile( $("#archiveLocalListElements").html() );
+  twapperSession.templates.simpleFooter = Handlebars.compile( $("#simpleFooter").html() );
+  twapperSession.templates.buttonFooter = Handlebars.compile( $("#buttonFooter").html() );
+  twapperSession.templates.navbarArchiveListFooter = Handlebars.compile( $("#navbarArchiveListFooter").html() );
+
+  
+  
+  
+  
+  Handlebars.registerPartial('header', $("#optionsHeader").html());
+  Handlebars.registerPartial('content', $("#optionsContent").html());
+  Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+
+  //Options Page
+  var optionsPage = {
+    "pageId":"optionsPage", 
+    "pageHeader":"Options",
+    "footerText":""};
+    
+  $.mobile.pageContainer.append(twapperSession.templates.page(optionsPage));
+  $('#optionsPage').page();
+
+
+
+  //WelcomePage
+  Handlebars.registerPartial('header', $("#welcomeHeader").html());
+  Handlebars.registerPartial('content', $("#welcomeContent").html());
+  var welcomePage = {
+    "pageId":"welcomePage", 
+    "pageHeader":"Twapperlyzer",
+    "footerText":""};
+    
+  $.mobile.pageContainer.append(twapperSession.templates.page(welcomePage));
+  $('#welcomePage').page();
+  
+  //Local Archives List
+  Handlebars.registerPartial('header', twapperSession.templates.normalHeader);
+  Handlebars.registerPartial('content', twapperSession.templates.listContent);
+  Handlebars.registerPartial('footer',   twapperSession.templates.navbarArchiveListFooter);
+
+  var localArchivesPage = {
+    "pageId":"localArchivesPage", 
+    "pageHeader":"Analysed Archives in DB", 
+    "listId":"localArchiveList", 
+    "footerText":""};
+  
+  $.mobile.pageContainer.append(twapperSession.templates.page(localArchivesPage));
+  $('#localArchivesPage').page();
+  
+  //Archives List
+  var localArchivesPage = {
+    "pageId":"listArchivesPage", 
+    "pageHeader":"Available Archives", 
+    "listId":"archivesList", 
+    "footerText":""};
+  
+  $.mobile.pageContainer.append(twapperSession.templates.page(localArchivesPage));
+  $('#localArchivesPage').page();
+  
+  
+}
+
+/**
+ * The First time when the site is ready the archive list is downloaded.
+ * Afterward the Button will be updated.
+ *
+ */
 function loadUserConfig(callback){
   var twapperlyzerStore = new Lawnchair('twapperlyzerStore', function(){});
-  twapperlyzerStore.get('twapperlyzerOptions', function(twapperlyzerOptions) {
+  twapperlyzerStore.get('twapperlyzerOfflineOptions', function(twapperlyzerOptions) {
     if(twapperlyzerOptions != null){
-      testConfig(twapperlyzerOptions.dataprovider, twapperlyzerOptions.ytkURL, function(err, list){
+      userOptions = twapperlyzerOptions;
+    }
+  });
+  twapperlyzerStore.get('twapperlyzerOnlineOptions', function(twapperlyzerOptions) {
+    if(twapperlyzerOptions != null){
+      if(_.isUndefined($_GET.laid)){
+        $.mobile.changePage('#welcomePage',{ transition: "fade"} );
+      }
+      testConfig(twapperlyzerOptions.dataprovider, twapperlyzerOptions.ytkUrl, function(err, list){
         if(err == null){
-          userOptions = twapperlyzerOptions;
-          archiveList = list;
-          $('#listHashtagsButton .ui-btn-text').text("List Hashtag Archives ("+archiveList.length+")");
-          $('#ytkURLField').val(userOptions.ytkURL);
+          userOptions.ytkUrl = twapperlyzerOptions.ytkUrl;
+          userOptions.dataprovider = twapperlyzerOptions.dataprovider;
+          twapperSession.ytkUrlHash = MD5(twapperlyzerOptions.ytkUrl);
+          twapperSession.archiveList = list;
+          $('#listHashtagsButton .ui-btn-text').text("List Hashtag Archives ("+twapperSession.archiveList.length+")");
+          $('#ytkURLField').val(userOptions.ytkUrl);
           $('#dataProviderField').val(userOptions.dataprovider);
           callback(null, true);
         }
@@ -140,94 +242,8 @@ function loadUserConfig(callback){
       });
     }else{
       callback("no config found", null);
-    }
-  });
-}
-
-function testConfig(dataprovider, ytkURL, callback){
-
-  /*
-  $.jsonp({
-    url: mx,
-    success: function(data) {
-      if(data.status == "ok"){
-        getArchiveList(ytkURL,dataprovider, function(err, list){
-          if(err == null){
-            callback(null, list);
-          }else{
-            callback(err, null);
-          }
-        });
-        
-      }else{
-        callback("Dataprovider URL is not valid", null);
-      }
-    },
-    error: function(d,msg) {
-      
-    }
-  });
-  */
-var testAPI = $.ajax({
-    url : 'http://'+dataprovider+'/testAPI?callback=?',
-    dataType : "jsonp",
-    timeout : 1000
-});
-
-testAPI.success(function(data) {
-      if(data.status == "ok"){
-        getArchiveList(ytkURL,dataprovider, function(err, list){
-          if(err == null){
-            callback(null, list);
-          }else{
-            callback(err, null);
-          }
-        });
-        
-      }else{
-        callback("Dataprovider URL is not valid", null);
-      }
-});
-
-testAPI.error(function() {
-  callback("Dataprovider URL is not valid", null);
-});
-
-}
-
-
-/**
- * The First time when the site is ready the archive list is downloaded.
- * Afterward the Button will be updated and if a Id is present in the
- *  url the corresponding Archive is loaded.  
- *
- */
- 
-function loadList(){
-  getArchiveList(userOptions.ytkURL,function(jsondata){
-      archiveList = jsondata[0];
-      $('#listHashtagsButton .ui-btn-text').text("List Hashtag Archives ("+archiveList.length+")");
-      if(typeof $_GET.id != 'undefined'){
-        id = new Object();
-        id.value = $_GET.id;
-        userOptions.selectedArchive = createSelectedArchiveObject(new Array(id));
-        $.mobile.changePage("#showArchivePage");
-      }
-  }); 
-}
-
-function getArchiveList(ytkURL, dataprovider, callback){
-  
-  $.ajax({
-    dataType: 'jsonp',
-    data: "ytkURL="+ytkURL,
-    jsonp: 'callback',
-    url: 'http://'+dataprovider+'/getArchiveList?callback=?',
-    success: function(data) {
-      if(data.status == "ok"){
-        callback(null, data.data[0]);
-      }else{
-        callback(data, null);
+      if(_.isUndefined($_GET.laid)){
+        $.mobile.changePage('#optionsPage',{ transition: "fade"} );
       }
     }
   });
@@ -252,11 +268,11 @@ function chooseArchiveFormHandler(event){
   if(userOptions == null){
     noVaildYtrkURL();
   }else{
-   chooseArchiveFormVars[0].value = validateHashtagField(chooseArchiveFormVars[0].value, archiveList);
+   chooseArchiveFormVars[0].value = validateHashtagField(chooseArchiveFormVars[0].value, twapperSession.archiveList);
     if(chooseArchiveFormVars[0].value == "error"){
       popErrorMessage("Can't analyse this archive",500);
     }else{
-      userOptions.selectedArchive = createSelectedArchiveObject(chooseArchiveFormVars);
+      twapperSession.selectedArchive = createSelectedArchiveObject(chooseArchiveFormVars);
       $.mobile.changePage("#showArchivePage");
     }
   }
@@ -267,7 +283,7 @@ function chooseArchiveFormHandler(event){
  * find the id to a hastag.
  * 
  * @param {String} value The user input
- * @param {Array} archiveList The list of available archives.
+ * @param {Array} twapperSession.archiveList The list of available archives.
  * @return {Number|String} the id or the string "error" 
  */
 function validateHashtagField(value, archiveList){
@@ -328,24 +344,25 @@ function optionsFormHandler(event){
   event.preventDefault();
 
 
-  var ytkURL = $('#ytkURLField').val();
+  var ytkUrl = $('#ytkURLField').val();
   var dataprovider = $('#dataProviderField').val();
 
   //Cutting the Slash off if needed
-  if (ytkURL!=null && ytkURL!=""){
-    if(ytkURL.lastIndexOf("/") == (ytkURL.length-1)) {
-      ytkURL=ytkURL.slice(0,ytkURL.length-1);
-      $('#ytkURLField').val(ytkURL)
+  if (ytkUrl!=null && ytkUrl!=""){
+    if(ytkUrl.lastIndexOf("/") == (ytkUrl.length-1)) {
+      ytkUrl=ytkUrl.slice(0,ytkUrl.length-1);
+      $('#ytkURLField').val(ytkUrl)
     }
   }
   var twapperlyzerStore = new Lawnchair('twapperlyzerStore', function(){});
 
-  twapperlyzerStore.save(new twapperlyzerClientOptions(ytkURL, dataprovider));
+  twapperlyzerStore.save(new twapperlyzerClientOnlineOptions(ytkUrl, dataprovider));
+  twapperlyzerStore.save(new twapperlyzerClientOfflineOptions());
   
   loadUserConfig(function(err,res){
     if(err==null){
       $.mobile.changePage("#welcomePage",{transition: "slide",reverse: true});
-      appendNewURLsToConfig([ytkURL,dataprovider], [config.YtkUrls,config.dataprovider]);
+      appendNewURLsToConfig([ytkUrl,dataprovider], [config.YtkUrls,config.dataprovider]);
 
     }else{
       twapperlyzerStore.nuke();
@@ -378,6 +395,19 @@ function clearUserConfigHandler(){
   popSimpleMessage("User config cleared.", 1000);
 }
 
+
+function localArchivesPageHandler(){
+  mydb.view("twapperlyzer/listArchives", {
+      success: function(data) {
+        generateArchiveList($('#localArchiveList'), data.rows);//local archive id
+      },
+      error: function(status) {
+          popErrorMessage("Clod not load Local Archives Analyses"+status, 3000)
+          $.mobile.changePage("#welcomePage",{transition: "slide",reverse: true});
+      }
+  });
+}
+
 /**
  * List Archives Page:
  *
@@ -388,35 +418,184 @@ function clearUserConfigHandler(){
  * archiveList 
  *
  */
-function listArchivesPageHandler(){
-  //Get the Global
-  var data = archiveList;
-  //Get the html element
-  var archivesList = $('#archivesList');
-  archivesList.empty();
-  for(var i=0; i<data.length; i++){
-    var entry = data[i];
-    var entryHtml = ['<li><a href="#showArchivePage" ytkaid="'+entry.id+'" ><h3>', entry.keyword, '</h3><p>', entry.description,'</p></a><span class="ui-li-count">'+formatNumber(entry.count)+'</span></li>'].join("");
-    archivesList.append(entryHtml);
-  }
-  archivesList.listview('refresh');
+function listArchivesPageHandler(event){
+  generateArchiveList($('#archivesList'), twapperSession.archiveList, twapperSession.ytkUrlHash);//your twapperkeeper archive id
 }
 
+function generateArchiveList(parent, data, hash){
+  Handlebars.registerHelper("laidHelper", function(id){ return hash+"-"+id});
+  parent.empty();
+  var template;
+  if(hash != null){
+    template = twapperSession.templates.archiveListElements;
+  }else{
+    template = twapperSession.templates.archiveLocalListElements;
+  }
+  
+  data.sort(compareSize);
+  var archiveListData = {};
+  archiveListData.entry = data;
+  parent.append(template(archiveListData));
+  parent.listview('refresh');
+  
+  function compareKeywords(a, b) {
+    if(_.isUndefined(a.value)){
+      var elementA = a.keyword.toLowerCase( );
+      var elementB = b.keyword.toLowerCase( );
+    }else{
+      var elementA = a.value.keyword.toLowerCase( );
+      var elementB = b.value.keyword.toLowerCase( );
+    }
+    elementA = cutFirstChar(elementA);
+    elementB = cutFirstChar(elementB);
+    
+    if (elementA < elementB) {return -1}
+    if (elementA > elementB) {return 1}
+    return 0;
+
+    function cutFirstChar(keyword){
+      if(keyword.charAt(0) == "#" || keyword.charAt(0) == "@"){
+        keyword = keyword.substring(1,keyword.length);
+      }
+      return keyword;
+    }
+  }
+  
+  function compareSize(a, b) {
+    if(_.isUndefined(a.value)){
+      var elementA = a.count;
+      var elementB = b.count;
+    }else{
+      var elementA = a.value.count;
+      var elementB = b.value.count;
+    }
+
+    return elementB - elementA;
+    
+  }
+  
+  function compareChronologic(a, b) {
+    if(_.isUndefined(a.value)){
+      var elementA = a.id;
+      var elementB = b.id;
+    }else{
+      var elementA = a.value.id;
+      var elementB = b.value.id;
+    }
+    return elementA - elementB;
+  }
+}
 
  /**
  * Get the archive id from the li and create the selectedArchive object.
  * This function is called before the handleShowArchivePage function. 
  *
  */
-function selectedArchiveByList(event) {  
-  var id = new Object();
-  id.value = $(this).attr("ytkaid");
-  id.name = "id";
+function selectedArchiveByList(event) {
+  event.preventDefault();
+  event.stopPropagation();
   
-  var l = new Object();
-  l.value = "";
-  l.name = "l";
-  userOptions.selectedArchive = createSelectedArchiveObject([id,l]);
+  createArchivePage($(this).attr("href").split("#page-")[1]);
+}
+
+function createArchivePage(requestedLaid){
+  var hashId = requestedLaid.split("-");
+  twapperSession.laid = requestedLaid;
+  if(twapperSession.lastLaid != twapperSession.laid){
+    mydb.openDoc( requestedLaid,  
+      {success: function(data) {
+          setData(data);
+          if (twapperSession.ytkUrlHash != null){
+            
+            if(twapperSession.ytkUrlHash == hashId[0] && twapperSession.archiveList[hashId[1]-1].id == hashId[1]){
+              if(data.messagesSoFar != twapperSession.archiveList[hashId[1]-1].count){
+                console.log("");
+                var url = "docID="+requestedLaid+"&l="+twapperSession.archiveList[hashId[1]-1].count;
+                updateArchive(url,config.thisdb, userOptions.dataprovider, function(err, result){
+                  if(err!=null){
+                    popErrorMessage("Could not update this archive: "+err.msg, 2000);
+                  }else{
+                    popSimpleMessage("Updating this archive: "+err.msg, 2000);
+                  }
+                });
+              }
+            }
+          }
+          
+          twapperSession.lastLaid = twapperSession.laid;
+        }
+      ,error: function(){
+        var id = new Object();
+        id.value = hashId[1];
+        id.name = "id";
+        var l = new Object();
+        l.value = "";
+        l.name = "l";
+        twapperSession.selectedArchive = createSelectedArchiveObject([id,l]);
+        $.mobile.showPageLoadingMsg();
+        getArchiveFromDataprovider(twapperSession.selectedArchive.url,config.thisdb, userOptions.dataprovider,function(data){
+          setData(data);
+          twapperSession.lastLaid = twapperSession.laid;
+        });
+      }
+      }
+    );
+  }else{
+    $.mobile.changePage("#page-"+twapperSession.laid)
+  }
+}
+
+ /**
+ * Get the archive id from the li and create the selectedArchive object.
+ * This function is called before the handleShowArchivePage function. 
+ *
+ */
+
+
+ 
+function getArchiveFromDataprovider(selectedArchiveUrl,thisdb, dataprovider, callback){
+    createOrUpdateArchive(selectedArchiveUrl, thisdb, dataprovider, function(err, result){
+      if(err!=null){
+        popErrorMessage("Could not analyse this archive: "+err.msg, 2000);
+      }else{
+        mydb.openDoc(result.id,  
+          {success: function(data) {
+              callback(data);
+            }
+          });
+      }
+    });
+}
+
+
+function setData(data){
+
+  if($('#page-'+data._id).length == 0){
+    twapperSession.archives[data._id] = data;
+    Handlebars.registerPartial('content', twapperSession.templates.archivePageContent);
+    Handlebars.registerPartial('widgetList', twapperSession.templates.widgetListTemplate);
+    
+    Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+    
+    var archivePageData = {
+      "pageId":"page-"+data._id, 
+      "pageHeader": "Archive: "+data.archive_info.keyword,
+      
+      "archive": data
+      };
+    $.mobile.pageContainer.append(twapperSession.templates.page(archivePageData));
+    twapperSession.archives[data._id].currentMsg = 0;
+    $('#page-'+data._id).page();
+    $('#archiveWidgetsList-'+data._id).delegate('a', 'click', archiveWidgetsListHandler);
+  }else{
+    console.log("Update....");//FIXME
+    var tmp = twapperSession.archives[data._id].currentMsg ;
+    twapperSession.archives[data._id] = data; 
+    twapperSession.archives[data._id].currentMsg = tmp;
+  }
+  
+  $.mobile.hidePageLoadingMsg();
+  $.mobile.changePage("#page-"+data._id);
 }
 
 /**
@@ -424,75 +603,8 @@ function selectedArchiveByList(event) {
  *
  */
  
- /**
- *  Get a archive from the server, ask for the one in options.selectedArchive.
- * - don't ask for the archive it is already present, but 
- *   check if it is this time a search
- * - transform the slider form element into a progress bar.
- * - check if the result has no messages included
- */
-function showArchivePageHandler(){
-  // First run result in undefied != some-id, so always true.
-  if(userOptions.lastselectedArchive != userOptions.selectedArchive){
-    setArchiveInfo(archiveList[userOptions.selectedArchive.id-1], $('#archive_info'));
-    updateMsgTotal("-");
-    $('#geoMarkerCount').text("-");
-    $('#archiveLinksCount').text("-");
-    $('#archiveHashtagsCount').text("-");
-    $('#archiveMentionsCount').text("-");
-    $('#archiveUsersCount').text("-");
-    
-    $('#downloadSliderBox').show();
-    $('#downloadSlider').val(0).slider("refresh");
-    $('#downloadSliderBox').find('input[type="number"]').hide();
-    //$('#archiveLinksListEntry').hide();
-    getArchive(userOptions.selectedArchive.url,function(jsondata){
-      mydb.openDoc(jsondata.id,  
-        {success: function(data) {
-            currentArchive = data; 
-            /*
-            if(currentArchive.messagesSoFar == 0){
-              popErrorMessage("Selection has no Messages",1500);
-              $.mobile.changePage("#welcomePage");
-            }
-            */
-            checkArchiveParts();
-          }
-        
-        });
-    });
-    userOptions.lastselectedArchive = userOptions.selectedArchive;
-  }else{
-    //console.log("client cache say",userOptions.lastselectedArchive,userOptions.selectedArchive);
-    }
-}
 
-function getArchive(selectedArchive, callback){
-  $.ajax({
-    dataType: 'jsonp',
-    data: selectedArchive,
-    jsonp: 'callback',
-    url: 'http://'+userOptions.dataprovider+'/createOrUpdateArchive?callback=?',
-    success: function(data) {
-      if(data.status == "ok"){
-        callback(data);
-      }else{
-        popErrorMessage("Error: "+data.msg+" Can't get Archive",2500);
-      }
-    }
-  });
-}
-/**
- * Set the archive info 
- * @param {Object} data The archive_info from a ytk archive
- * @param {Object} parent The html tag where the archive_info should be appended
- */
-function setArchiveInfo(data, parent){
-parent.empty();
-var create_time = new Date(data.create_time*1000);//It is in Epoch time, so sec not milisec
-parent.append("<center><h2>"+data.keyword+"</h2><p>"+data.description+"</p><p>"+create_time+"</p><p>total number of tweets = <strong id=\"currentArchiveCount\">"+formatNumber(data.count)+"</strong></p></center>");
-$('#browseMessagesCount').text(formatNumber(data.count));
-}
+
 
 /**
  * Set the download slider to a new position and fade it out if the 
@@ -507,7 +619,7 @@ function updateTheDownloadSlider(progress) {
 }
 
 
-function checkArchiveParts(){
+function checkArchiveParts(currentArchive){
   updateMsgTotal(currentArchive.messagesSoFar);
   
   if(currentArchive.geoMarker.length != 0){
@@ -565,72 +677,6 @@ function partIsSaved(name,data){
     break;        
   }
 }
-
-
-function addUrlChart(){
-  $('#archiveLinksContainer').html('');
-  $('#archiveLinksCount').text(formatNumber(currentArchive.urls.length));
-  var chartOptions = {
-    chart: {
-        renderTo: 'archiveLinksContainer',
-        plotBackgroundColor: null,
-        plotBorderWidth: null,
-        plotShadow: false
-    },
-    title: {
-        text: 'Links in the Archive'
-    },
-
-    tooltip: {
-        formatter: function() {
-            return '<b>'+ this.y +'</b> times: '+ this.point.name;
-        }
-    },
-    plotOptions: {
-        pie: {
-            size: '100%',
-            allowPointSelect: true,
-            cursor: 'pointer',
-            
-            dataLabels: {
-                distance: -30,
-                enabled: false,
-                color: '#000000',
-                connectorColor: '#000000',
-                formatter: function() {
-                    return '<b>'+ this.y +'</b> times';
-                }
-            }
-            
-        }
-    },
-    series: []
-  };
-  var series = {
-    type: 'pie',
-    name: 'Links',
-    point: {
-      events: {
-        click: function(e) {
-         this.slice();
-         var clicked = this;
-         setTimeout(function(){
-             location.href = clicked.config[0];
-         }, 500)
-         e.preventDefault();
-        }
-      }
-    },
-    data: []
-  };
-  
-  _.each(_.first(currentArchive.urls, userOptions.showLimit), function(url){
-    series.data.push([ url.text, url.weight]);
-  });
-  chartOptions.series.push(series);
-  
-  chart = new Highcharts.Chart(chartOptions);
-}
 /**
  * Set the right amount of messages to all different places.
  *
@@ -640,11 +686,39 @@ function updateMsgTotal(msgTotal){
   $('#currentArchiveCount').text(formatNumber(msgTotal));
 }
 
+
+
 function archiveWidgetsListHandler(event){
   event.preventDefault();
   event.stopPropagation();
   var target = $(this).attr("href");
-  
+  var pageHashId = target.split("-");
+  var laid = pageHashId[1]+"-"+pageHashId[2];
+
+  if($(target).length == 0){
+    switch(pageHashId[0]){
+      case "#showMsgsPage" :
+        Handlebars.registerPartial('content', twapperSession.templates.listContent);
+        Handlebars.registerPartial('footer', twapperSession.templates.buttonFooter);
+        var showMsgsPage = {
+          "pageId":"showMsgsPage-"+laid, 
+          "pageHeader":"Messgaes", 
+          "listId":"msgList-"+laid, 
+          "footerButtonId":"moreMsgsButton-"+laid,
+          "footerButtonText": "More Messages"
+          };
+        $.mobile.pageContainer.append(twapperSession.templates.page(showMsgsPage));
+        $(target).page();
+        $.mobile.changePage(target);
+        $("#moreMsgsButton-"+laid).click(loadMessagesFromServer);
+        loadMessagesFromServer();
+      break;
+      
+    }
+  }else{
+    $.mobile.changePage(target);
+  }
+  /*
   if(target == "#mapPage"){
     setUpGeoMarkerForArchive();
   }else if(target == "#showMsgsPage"){
@@ -662,85 +736,16 @@ function archiveWidgetsListHandler(event){
   }else if(target == "#archiveUsersPage"){
     $.mobile.changePage(target);
   }
+  */
 }
 
-/**
- * Clear the map and put the geoMarker on the map. 
- *  -a blue for one Person
- *  -a red one for more Peaple at the same place
- *
- */
-function setUpGeoMarkerForArchive(){
-  var data = currentArchive.geoMarker;
-  setUpMap();
-  map.setView(new L.LatLng(51.719444, 8.757222,true), 2);
-  var colorMarker = L.Icon.extend({
-    iconUrl: '',
-    shadowUrl: 'css/images/marker-shadow.png',
-    iconSize: new L.Point(25, 41),
-    shadowSize: new L.Point(41, 41),
-    iconAnchor: new L.Point(22, 94),
-    popupAnchor: new L.Point(-3, -76)
-  });
-  var redMarker = new colorMarker('css/images/marker-red.png');
-  for (var i = 0 ; i < data.length; i++) {
-    var geoM = data[i];
-    // create a marker in the given location and add it to the map
-    var marker;
-    var text ="";
-    var pos = new L.LatLng(geoM.lat, geoM.long,true);
-    //One Message at one place, from one person;
-    if(geoM.users.length == 1 && geoM.users[0].tweets.length == 1){
-      marker = new L.Marker(pos);
-      text +="<a href=\"http://twitter.com/#!/"+geoM.users[0].name+"/status/"+geoM.users[0].tweets[0].id+"\" target=\"_blank\">"+geoM.users[0].name+"</a>";
-      //console.log("Simple Marker please",_.values(geoM.messages));
-    }else if(geoM.users.length == 1){
-      marker = new L.Marker(pos);
-      text +=" <a href=\"http://twitter.com/#!/"+geoM.users[0].name+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[0].tweets.length,9)+"em;\">"+geoM.users[0].name+"</a> ";
-      //console.log("Simple Marker please",_.values(geoM.messages));
-    }else{
-      marker = new L.Marker(pos,{icon:redMarker});
-      for (var k = 0; k < geoM.users.length; k++){
-        text +=" <a href=\"http://twitter.com/#!/"+geoM.users[k].name+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[k].tweets.length,9)+"em;\">"+geoM.users[k].name+"</a> ";
-      }
-    }
-    marker.bindPopup(text,{autoPan:false});  
-    map.addLayer(marker);
-    //console.log("marker",marker);
-  }
-  $.mobile.changePage("#mapPage");
-    
-}
+
 /**
  * Show Messages Page:
  *
  */
- 
-  /**
- * Empty the list and fill it with the first messages
- * 
- */
-function showMessagePageHandler(){
-  var msgList = $('#msgList');
-  msgList.empty();
-  userOptions.currentMsg=0;
-  loadMessagesFromServer();
-}
 
- /**
- * adding messages to the list.
- * 
- */
-function addMsgs(data){
-  var msgList = $('#msgList');
-  for(userOptions.currentMsg; userOptions.currentMsg<data.length; userOptions.currentMsg++){
-    var entry = data[userOptions.currentMsg];
-    entry.msgid = userOptions.currentMsg;
-    msgList.append(getMsgEntryHTML(entry));
-  }
-  
-  msgList.listview('refresh');
-}
+
 
 /**
  * create a string with a list entry (html code)  for a message object
@@ -768,7 +773,7 @@ function loadMsgAtPageEnd() {
 
   pixelsFromWindowBottomToBottomInPercent=Math.round(pixelsFromWindowBottomToBottom/($(document).height()/100));
   
-    if($.mobile.activePage.attr("id")=="showMsgsPage"){
+    if($.mobile.activePage.attr("id").indexOf("showMsgsPage") !== -1){
       if(pixelsFromWindowBottomToBottomInPercent<20){
         loadMessagesFromServer();
       }
@@ -777,45 +782,41 @@ function loadMsgAtPageEnd() {
 }
 
  /**
- * add messages to the current list by expanding the 
- * currentArchive.tweets on the server side
+ * add messages to the current list
  * 
  */
-function moreMsgsButtonHandler(){
-    loadMessagesFromServer();
-  }
-
 function loadMessagesFromServer(){
+  laid = $.mobile.activePage.attr("id").split("showMsgsPage-")[1];
+  var currentArchive = twapperSession.archives[laid];
   var lastID=0;
   if(currentArchive.tweets.length != 0 ){
     
     lastID = currentArchive.tweets[currentArchive.tweets.length-1].id;
   }
-  if(userOptions.currentMsg <= currentArchive.messagesSoFar){
-    getMsgs(lastID,userOptions.addMsgVal, userOptions.ytkURL, currentArchive.archive_info.id, function(response){
-      response.shift(); 
+  if(currentArchive.currentMsg <= currentArchive.messagesSoFar){
+    getMsgs(lastID,userOptions.addMsgVal, userOptions.ytkUrl, currentArchive.archive_info.id,userOptions.dataprovider, function(response){
+      if(currentArchive.tweets.length != 0 ){
+        response.shift();
+      }
       currentArchive.tweets = currentArchive.tweets.concat(response);
-      addMsgs(currentArchive.tweets);
+      
+      var msgList = $('#msgList-'+laid);
+      for(currentArchive.currentMsg; currentArchive.currentMsg<currentArchive.tweets.length; currentArchive.currentMsg++){
+        var entry = currentArchive.tweets[currentArchive.currentMsg];
+        entry.msgid = currentArchive.currentMsg;
+        entry.laid = laid;
+        if(entry.geo_coordinates_0 == 0){
+          entry.geo_coordinates_0 = false;
+        }
+        msgList.append(twapperSession.templates.msgEntryTemplate(entry));
+        //msgList.append(getMsgEntryHTML(entry));
+      }
+      
+      msgList.listview('refresh');
     });
   }
-
 }
 
-function getMsgs(lastID,limit, ytkURL, id, callback){
-  $.ajax({
-    dataType: 'jsonp',
-    data: "ytkURL="+ytkURL+"&l="+limit+"&id="+id+"&lastID="+lastID,
-    jsonp: 'callback',
-    url: 'http://'+userOptions.dataprovider+'/getMsgs?callback=?',
-    success: function(data) {
-      if(data.status == "ok"){
-        callback(data.data.tweets);
-      }else{
-        popErrorMessage("Error: "+jsondata.msg+" Can't get Messages",2500);
-      }
-    }
-  });
-}
 /**
  * Check if link was a Link to a map and if so 
  * - clear the map
@@ -833,67 +834,7 @@ function exportMessageEntry(event) {
   }
 }
 
-/**
- * Map Page:
- *
- */
- 
-/**
- * Set up the map to present a single message. There for it generate 
- * a marker with the avatar icon of the user and the linked text.
- *
- * @param {Object} entry The message Object from a archive of a ytk instance
- */
-function setUpMap(entry){
-  var mapContainer = $('#mapContainer');
-  
-  //Adjust the map container to the maximum
-  var usedHeight = 0;
-        
-  mapContainer.siblings().each(function() {
-    usedHeight += $(this).outerHeight();
-  });
-        
-  mapContainer.height(mapContainer.parent().height() - usedHeight);
-  
-  //clear the old map data
-  if (map) {
-      $('#mapContainer').html('');
-    }
-    
-  // initialize the map on the "map" div
-  map = new L.Map('mapContainer');
-  
-  // create a CloudMade tile layer
-  var cloudmadeUrl = 'http://{s}.tile.cloudmade.com/d692a017c2bc4e45a59d57699d0e0ea7/997/256/{z}/{x}/{y}.png',
-      cloudmadeAttribution = 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
-      cloudmade = new L.TileLayer(cloudmadeUrl, {maxZoom: 18, attribution: cloudmadeAttribution});
-      
-  // add the CloudMade layer to the map
-  map.addLayer(cloudmade);
-}
 
-function getAvantarMarker(msgLocation, text, imageUrl){
-  /**
- * The Icons for the map in the avantar size.
- */
-  var AvantarIcon = L.Icon.extend({
-    iconUrl: '',
-    shadowUrl: '',
-    iconSize: new L.Point(45, 45),
-    shadowSize: new L.Point(68, 95),
-    iconAnchor: new L.Point(22, 94),
-    popupAnchor: new L.Point(-3, -76)
-});
-  var icon = new AvantarIcon(imageUrl);
-  // create a marker in the given location and add it to the map
-  var marker = new L.Marker(msgLocation, {icon: icon});
-  // attach a given HTML content to the marker and immediately open it
-  marker.bindPopup(text,{autoPan:false});  
- // marker = new L.Marker(msgLocation);
- 
- return marker;
-}
 
 /**
  * General JQM Helper Functions:
@@ -994,7 +935,7 @@ function getHTMLLinksForText(text){
 function createSelectedArchiveObject(array){
   res = new Object;
   res.id = array[0].value;
-  url = "ytkURL="+userOptions.ytkURL;
+  url = "ytkUrl="+userOptions.ytkUrl;
   
   _.each(array, function(element){
       //every fild that is set will get in the url
@@ -1006,7 +947,7 @@ function createSelectedArchiveObject(array){
       }
       //and the limit even if it is not set
       if(element.name == "l" && element.value == ""){
-        url += "&l="+ archiveList[res.id-1].count;
+        url += "&l="+ twapperSession.archiveList[res.id-1].count;
       }
     });
   res.url = url;
@@ -1020,8 +961,7 @@ function createSelectedArchiveObject(array){
  * @param {String} prefix Optional 
  * @return {String} formatted number
  */
-function formatNumber(num,prefix){
-   prefix = prefix || '';
+function formatNumber(num){
    num += '';
    var splitStr = num.split('.');
    var splitLeft = splitStr[0];
@@ -1030,7 +970,7 @@ function formatNumber(num,prefix){
    while (regx.test(splitLeft)) {
       splitLeft = splitLeft.replace(regx, '$1' + ',' + '$2');
    }
-   return prefix + splitLeft + splitRight;
+   return splitLeft + splitRight;
 }
 
  /**
@@ -1053,6 +993,7 @@ function unformatNumber(num) {
  */
 function getQueryParams(qs) {
   qs = qs.split("+").join(" ");
+
   var params = {};
   var tokens,
   re = /[?&]?([^=]+)=([^&]*)/g;
@@ -1065,24 +1006,6 @@ function getQueryParams(qs) {
   return params;
 }
 
-function buildPage(id, container, header,style){
-var page ='<div data-role="page" id="'+id+'" data-url="'+id+'">';
- 
-  page +='<div data-role="header">';
-  page +='<a href="#optionsPage" class="ui-btn-right"  data-icon="gear" >Options</a>';
-  page +='  <h1>'+header+'</h1>';
-  page +='</div>';
- 
-  page +='<div data-role="content" id="'+container+'", style="'+style+'">';
-  page +='</div>';
- 
-  page +='<div data-role="footer">';
-  page +='<h4>Footer</h4>';
-  page +='</div>';
-page +='</div>';
-
-return page;
-}
  /**
  * A simple check if a String is a url
  * 
@@ -1098,21 +1021,29 @@ return false;
 }
 return true;
 }
+
+function copyToClipboard (text) {
+  window.prompt ("Copy to clipboard: ", text);
+}
+
 /**
  * Own Objects 
  */
 
 /**
- * Holding a bunch of variables so that the global space is not to polluted 
+ * Hold the user Settings for Functions that should be available when the couchdb is locally installed
  */
-function twapperlyzerClientOptions(ytkURL, dataprovider){
-  this.key = 'twapperlyzerOptions';
-  this.ytkURL = ytkURL;
-  this.currentMsg=0;
+function twapperlyzerClientOfflineOptions(){
+  this.key = 'twapperlyzerOfflineOptions';
   this.addMsgVal=5;
-  this.selectedArchive;
-  this.lastselectedArchive;
   this.showLimit = 20;
-  this.dataprovider = dataprovider;
 }
 
+/**
+ * Hold the urls to the that needed for new analyses and updates
+ */
+function twapperlyzerClientOnlineOptions(ytkUrl, dataprovider){
+  this.key = 'twapperlyzerOnlineOptions';
+  this.ytkUrl = ytkUrl;
+  this.dataprovider = dataprovider;
+}

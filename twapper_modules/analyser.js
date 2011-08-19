@@ -60,7 +60,8 @@ function analyseMesseges(archiveInfo, callback){
   response.mentions = archiveInfo.mentions;
 
   response.messagesSoFar = archiveInfo.messagesSoFar + messages.length;
-
+  response.archive_info = archiveInfo.archive_info;
+  console.log("archiveInfo.archive_info",archiveInfo.archive_info);
   callback(response);  
 
   //A-Synchronous Callbacks

@@ -38,7 +38,7 @@
   
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="css/jquery.mobile-1.0b2.min.css" type="text/css" media="screen" charset="utf-8" /> 
-  <link rel="stylesheet" href="css/style.css?v=1"> 
+  <link rel="stylesheet" href="css/style.css?v=1" type="text/css" media="screen" charset="utf-8"> 
   <link rel="stylesheet" href="css/jquery.mobile.datebox.min.css" type="text/css" media="screen" charset="utf-8" /> 
 	<link rel="stylesheet" href="css/leaflet.css" type="text/css" media="screen" charset="utf-8" />
   <link rel="stylesheet" href="css/jqcloud.css" type="text/css" />
@@ -49,271 +49,10 @@
 </head>
 
 <body>
-
-<div data-role="page" id="welcomePage">
- 
-  <div data-role="header">
-    <h1>twapperlyzer</h1>
-    <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
+  <div data-role="page" >
+     <noscript><center><h1>Without Javascript enabled Twapperlyzer will not work.</h1></center></noscript>
   </div>
- 
-  <div data-role="content">
-  <a href="#listArchivesPage" data-icon="grid" data-role="button" id="listHashtagsButton">List Hashtag Archives </a>
-  <p><center><strong>or</strong></center></p>
-
-    <form id="chooseArchiveForm" action="#" method="get">
-      <div data-role="fieldcontain">
-        <label for="hashtagField" alt="Hastag or Archive ID">Enter Hashtag:</label>
-        <input id="hashtagField" type="text" name="id" />
-      </div>
-      <div data-role="collapsible" data-collapsed="true" style="width: 98%; margin-left: auto; margin-right: auto;">
-        <h3>More Options</h3>
-        <div data-role="fieldcontain">
-<label for="startDate">Start Date:</label>
-<input name="startDate" id="startDate" type="date" data-role="datebox"
-   data-options='{"mode": "calbox","noButtonFocusMode": true}'>
-</div>
-
-<div data-role="fieldcontain">
-<label for="endDate">Start Date:</label>
-<input name="endDate" id="endDate" type="date" data-role="datebox"
-   data-options='{"mode": "calbox","noButtonFocusMode": true}'>
-</div>
-
-<div data-role="fieldcontain">
-    <label for="fromUserField">From User:</label>
-    <input type="text" name="from_user" id="fromUserField" value=""  />
-</div>	
-<div data-role="fieldcontain">
-    <label for="tweetTextField">Tweet Text:</label>
-    <input type="text" name="text" id="tweetTextField" value=""  />
-</div>	
-
-<div data-role="fieldcontain">
-    <fieldset data-role="controlgroup">
-    	<legend>Order:</legend>
-         	<input type="radio" name="o" id="searchOrderA" value="a"  />
-         	<label for="searchOrderA">ascending</label>
-
-         	<input type="radio" name="o" id="searchOrderD" checked="checked" value="d"  />
-         	<label for="searchOrderD">descending</label>
-    </fieldset>
-</div>
-
-<div data-role="fieldcontain">
-  <label for="selectLimit" class="select">View Limit:</label>
-  <select name="l" id="selectLimit">
-  <option value=""></option>
-  <option value="10">10</option>
-  <option value="25">25</option>
-  <option value="50">50</option>
-  <option value="250">250</option>
-  <option value="500">500</option>
-  <option value="1000">1000</option>
-  <option value="10000">10000</option>
-  <option value="100000">100000</option>
-  <option value="1000000">1000000</option>
-  <option value="10000000">10000000</option>
-	</select>
-</div>
-
-
-<div data-role="fieldcontain">
-	<label for="selectLang" class="select">Language:</label>
-<select name="lang" id="selectLang">
-<option value=""></option>
-<option value="aa">Afar (aa)</option><option value="ab">Abkhazian (ab)</option><option value="ae">Avestan (ae)</option><option value="af">Afrikaans (af)</option><option value="ak">Akan (ak)</option><option value="am">Amharic (am)</option><option value="an">Aragonese (an)</option><option value="ar">Arabic (ar)</option><option value="as">Assamese (as)</option><option value="av">Avaric (av)</option><option value="ay">Aymara (ay)</option><option value="az">Azerbaijani (az)</option>
-<option value="ba">Bashkir (ba)</option><option value="be">Belarusian (be)</option><option value="bg">Bulgarian (bg)</option><option value="bh">Bihari (bh)</option><option value="bi">Bislama (bi)</option><option value="bm">Bambara (bm)</option><option value="bn">Bengali (bn)</option><option value="bo">Tibetan (bo)</option><option value="br">Breton (br)</option><option value="bs">Bosnian (bs)</option>
-<option value="ca">Catalan (ca)</option><option value="ce">Chechen (ce)</option><option value="ch">Chamorro (ch)</option><option value="co">Corsican (co)</option><option value="cr">Cree (cr)</option><option value="cs">Czech (cs)</option><option value="cu">Church Slavic (cu)</option><option value="cv">Chuvash (cv)</option><option value="cy">Welsh (cy)</option>
-<option value="da">Danish (da)</option><option value="de">German (de)</option><option value="dv">Divehi (dv)</option><option value="dz">Dzongkha (dz)</option>
-<option value="ee">Ewe (ee)</option><option value="el">Greek (el)</option><option value="en">English (en)</option><option value="eo">Esperanto (eo)</option><option value="es">Spanish (es)</option><option value="et">Estonian (et)</option><option value="eu">Basque (eu)</option>
-<option value="fa">Persian (fa)</option><option value="ff">Fulah (ff)</option><option value="fi">Finnish (fi)</option><option value="fj">Fijian (fj)</option><option value="fo">Faroese (fo)</option><option value="fr">French (fr)</option><option value="fy">Western Frisian (fy)</option>
-<option value="ga">Irish (ga)</option><option value="gd">Scottish Gaelic (gd)</option><option value="gl">Galician (gl)</option><option value="gn">Guarani (gn)</option><option value="gu">Gujarati (gu)</option><option value="gv">Manx (gv)</option>
-<option value="ha">Hausa (ha)</option><option value="he">Hebrew (he)</option><option value="hi">Hindi (hi)</option><option value="ho">Hiri Motu (ho)</option><option value="hr">Croatian (hr)</option><option value="ht">Haitian (ht)</option><option value="hu">Hungarian (hu)</option><option value="hy">Armenian (hy)</option><option value="hz">Herero (hz)</option>
-<option value="ia">Interlingua  (ia)</option><option value="id">Indonesian (id)</option><option value="ie">Interlingue (ie)</option><option value="ig">Igbo (ig)</option><option value="ii">Sichuan Yi (ii)</option><option value="ik">Inupiaq (ik)</option><option value="io">Ido (io)</option><option value="is">Icelandic (is)</option><option value="it">Italian (it)</option><option value="iu">Inuktitut (iu)</option>
-<option value="ja">Japanese (ja)</option><option value="jv">Javanese (jv)</option>
-<option value="ka">Georgian (ka)</option><option value="kg">Kongo (kg)</option><option value="ki">Kikuyu (ki)</option><option value="kj">Kwanyama (kj)</option><option value="kk">Kazakh (kk)</option><option value="kl">Kalaallisut (kl)</option><option value="km">Khmer (km)</option><option value="kn">Kannada (kn)</option><option value="ko">Korean (ko)</option><option value="kr">Kanuri (kr)</option><option value="ks">Kashmiri (ks)</option><option value="ku">Kurdish (ku)</option><option value="kv">Komi (kv)</option><option value="kw">Cornish (kw)</option><option value="ky">Kirghiz (ky)</option>
-<option value="la">Latin (la)</option><option value="lb">Luxembourgish (lb)</option><option value="lg">Ganda (lg)</option><option value="li">Limburgish (li)</option><option value="ln">Lingala (ln)</option><option value="lo">Lao (lo)</option><option value="lt">Lithuanian (lt)</option><option value="lu">Luba-Katanga (lu)</option><option value="lv">Latvian (lv)</option>
-<option value="mg">Malagasy (mg)</option><option value="mh">Marshallese (mh)</option><option value="mi">Maori (mi)</option><option value="mk">Macedonian (mk)</option><option value="ml">Malayalam (ml)</option><option value="mn">Mongolian (mn)</option><option value="mr">Marathi (mr)</option><option value="ms">Malay (ms)</option><option value="mt">Maltese (mt)</option><option value="my">Burmese (my)</option>
-<option value="na">Nauru (na)</option><option value="nb">Norwegian Bokmal (nb)</option><option value="nd">North Ndebele (nd)</option><option value="ne">Nepali (ne)</option><option value="ng">Ndonga (ng)</option><option value="nl">Dutch (nl)</option><option value="nn">Norwegian Nynorsk (nn)</option><option value="no">Norwegian (no)</option><option value="nr">South Ndebele (nr)</option><option value="nv">Navajo (nv)</option><option value="ny">Chichewa (ny)</option>
-<option value="oc">Occitan (oc)</option><option value="oj">Ojibwa (oj)</option><option value="om">Oromo (om)</option><option value="or">Oriya (or)</option><option value="os">Ossetian (os)</option>
-<option value="pa">Panjabi (pa)</option><option value="pi">Pali (pi)</option><option value="pl">Polish (pl)</option><option value="ps">Pashto (ps)</option><option value="pt">Portuguese (pt)</option>
-<option value="qu">Quechua (qu)</option>
-<option value="rm">Raeto-Romance (rm)</option><option value="rn">Kirundi (rn)</option><option value="ro">Romanian (ro)</option><option value="ru">Russian (ru)</option><option value="rw">Kinyarwanda (rw)</option>
-<option value="sa">Sanskrit (sa)</option><option value="sc">Sardinian (sc)</option><option value="sd">Sindhi (sd)</option><option value="se">Northern Sami (se)</option><option value="sg">Sango (sg)</option><option value="si">Sinhala (si)</option><option value="sk">Slovak (sk)</option><option value="sl">Slovenian (sl)</option><option value="sm">Samoan (sm)</option><option value="sn">Shona (sn)</option><option value="so">Somali (so)</option><option value="sq">Albanian (sq)</option><option value="sr">Serbian (sr)</option><option value="ss">Swati (ss)</option><option value="st">Southern Sotho (st)</option><option value="su">Sundanese (su)</option><option value="sv">Swedish (sv)</option><option value="sw">Swahili (sw)</option>
-<option value="ta">Tamil (ta)</option><option value="te">Telugu (te)</option><option value="tg">Tajik (tg)</option><option value="th">Thai (th)</option><option value="ti">Tigrinya (ti)</option><option value="tk">Turkmen (tk)</option><option value="tl">Tagalog (tl)</option><option value="tn">Tswana (tn)</option><option value="to">Tonga (to)</option><option value="tr">Turkish (tr)</option><option value="ts">Tsonga (ts)</option><option value="tt">Tatar (tt)</option><option value="tw">Twi (tw)</option><option value="ty">Tahitian (ty)</option>
-<option value="ug">Uighur (ug)</option><option value="uk">Ukrainian (uk)</option><option value="ur">Urdu (ur)</option><option value="uz">Uzbek (uz)</option>
-<option value="ve">Venda (ve)</option><option value="vi">Vietnamese (vi)</option><option value="vo">Volapuk (vo)</option>
-<option value="wa">Walloon (wa)</option><option value="wo">Wolof (wo)</option>
-<option value="xh">Xhosa (xh)</option>
-<option value="yi">Yiddish (yi)</option><option value="yo">Yoruba (yo)</option>
-<option value="za">Zhuang (za)</option><option value="zh">Chinese (zh)</option><option value="zu">Zulu (zu)</option>
-</select>
-</div>
-<div data-role="fieldcontain">
- 	<fieldset data-role="controlgroup">
-		<legend></legend>
-		<input type="checkbox" name="nort" id="nort" class="custom" />
-		<label for="nort">remove RTs</label>
-    </fieldset>
-</div>
-
-      </div>
-      <button type="submit">Submit</button>
-    </form>
-  </div>
-
-  <div data-role="footer">
-    <h4>Page Footer</h4>
-  </div>
-</div>
-
-<div data-role="page" id="optionsPage">
- 
-  <div data-role="header">
-    <h1>twapperlyzer</h1>
-    <a href="#welcomePage" data-direction="reverse" class='ui-btn-right'  data-icon='home' >Home</a>
-  </div>
- 
-  <div data-role="content">
-    <form id="optionsForm" action="#" method="get">
-      
-      <div data-role="fieldcontain">
-        <label for="ytkURLField"> Enter YourTapperKeeper URL:</label>
-        <input id="ytkURLField" type="text" name="ytkURLField" value="" />
-      </div>
-      
-      <div  data-role="fieldcontain" >
-        <label for="ytkURLSelect">or choose from the list:</label>
-        <select name="ytkURLSelect" id="ytkURLSelect">
-        </select>
-      </div>
-      
-      
-      <div data-role="fieldcontain">
-        <label for="dataProviderField">Enter data provider URL:</label>
-        <input id="dataProviderField" type="text" name="dataProviderField" value="" />
-      </div>
-      
-      <div  data-role="fieldcontain" >
-        <label for="dataProviderSelect">or choose from the list:</label>
-        <select name="dataProviderSelect" id="dataProviderSelect">
-        </select>
-      </div>
-      
-      <button type="submit" >Submit</button>
-    </form>
-    
-  <a href="#localArchives" data-role="button">Show already analysed archives</a>
-  <button id="clearUserConfigButton" >Clear user config</button>
-  </div>
- 
-  <div data-role="footer">
-    <h4>Page Footer</h4>
-  </div>
-</div>
-
-<div data-role="page" id="listArchivesPage">
- 
-  <div data-role="header">
-    <h1>Available Archives</h1>
-    <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
-  </div>
- 
-  <div data-role="content">
-    <ul data-role="listview" data-filter="true" id="archivesList">
-    </ul>
- 
-  </div>
- 
-  <div data-role="footer">
-    <h4>Page Footer</h4>
-  </div>
-</div>
-
-<div data-role="page" id="showArchivePage">
- 
-  <div data-role="header">
-  <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
-    <h1>Show Archive</h1>
-  </div>
- 
-  <div data-role="content">
   
-    <div class="ui-bar ui-bar-e" id="archive_info"></div>
-    <div data-role="fieldcontain" id="downloadSliderBox">
-	    <label for="downloadSlider">Analyse Status:</label>
- 	    <input type="range" name="slider" id="downloadSlider" value="0" min="0" max="100"  />
-    </div>
-    <ul data-role="listview" data-inset="true" id="archiveWidgetsList">
-    <li><a href="#showMsgsPage"> Browse Messages</a><span id="browseMessagesCount" class="ui-li-count"></span></li>
-    <li><a href="#mapPage"> Show Taged messages on the Map</a><span id="geoMarkerCount" class="ui-li-count">-</span></li>
-    <li><a href="#archiveLinksPage"> Show the Links </a><span id="archiveLinksCount" class="ui-li-count">-</span></li>
-    <li><a href="#archiveHashtagsPage"> Show the Hashtags </a><span id="archiveHashtagsCount" class="ui-li-count">-</span></li>
-    <li><a href="#archiveMentionsPage"> Show the Mentions </a><span id="archiveMentionsCount" class="ui-li-count">-</span></li>
-    <li><a href="#archiveUsersPage"> Show the Users </a><span id="archiveUsersCount" class="ui-li-count">-</span></li>    
-    </ul>
- 
-  </div>
- 
-  <div data-role="footer">
-    <h4><button type="submit" id="debugButton">Debug</button></h4>
-  </div>
-</div>
-
-<div data-role="page" id="showMsgsPage">
- 
-  <div data-role="header">
-  <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
-    <h1>Messages</h1>
-  </div>
- 
-  <div data-role="content">
-    <ul data-role="listview" id="msgList">
-    </ul>
- 
-  </div>
- 
-  <div data-role="footer">
-    <h4><button type="submit" id="moreMsgsButton">more Messages</button></h4>
-  </div>
-</div>
-
-<div data-role="page" id="ErrorPage">
- 
-  <div data-role="header">
-  <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
-    <h1>Error</h1>
-  </div>
- 
-  <div data-role="content">
-    <p>Error</p>
- 
-  </div>
- 
-  <div data-role="footer">
-  <h4>Footer</h4>
-  </div>
-</div>
-
-<div data-role="page" id="mapPage">
- 
-  <div data-role="header" data-position="fixed">
-  <a href="#optionsPage" class='ui-btn-right'  data-icon='gear' >Options</a>
-    <h1>Map</h1>
-  </div>
- 
-  <div data-role="content" id="mapContainer">
-
-  </div>
- 
-  <div data-role="footer" data-position="fixed">
-  <h4>Footer</h4>
-  </div>
-</div>
-
-
-
   <!-- JavaScript at the bottom for fast page loading -->
 
 <script type="text/javascript" src="js/libs/jquery-1.6.1.min.js"></script>
@@ -322,8 +61,7 @@
 </script>
 
   <!-- scripts concatenated and minified via ant build script-->
-  <script type="text/javascript" src="js/mylibs/jquery.mobile-1.0b2.min.js"></script> 
-  <script type="text/javascript" src="js/mylibs/jquery.mobile.datebox.min.js"></script>
+  <script type="text/javascript" src="js/mylibs/handlebars.1.0.0.beta.3.js"></script> 
   <script src="js/mylibs/leaflet-0.2.1.min.js"></script> 
   <script src="js/mylibs/underscore-min.js"></script>
   <script src="js/mylibs/helper.js"></script> 
@@ -335,7 +73,9 @@
   <script type="text/javascript" src="js/mylibs/jqcloud-0.2.0.js"></script>
   <script type="text/javascript" src="js/mylibs/lawnchair-0.6.1.min.js"></script> 
   <script type="text/javascript" src="js/mylibs/jquery.couch.js"></script> 
-
+  <script type="text/javascript" src="js/mylibs/twapperlyzerApi.js"></script> 
+  <script type="text/javascript" src="js/mylibs/jquery.mobile-1.0b2.js"></script> 
+  <script type="text/javascript" src="js/mylibs/jquery.mobile.datebox.min.js"></script>
   <!-- end concatenated and minified scripts-->
 
   <script>
@@ -350,5 +90,293 @@
     });
     
   </script>
+  
+<script id="page" type="text/html">
+  <div data-role="page" id="{{pageId}}" data-url="{{pageId}}" >
+    {{> header}}
+    {{> content}}
+    {{> footer}}
+  </div>
+</script>
+
+<!--HEADER -->
+<script id="normalHeader" type="text/html">
+    <div data-role="header">
+      <a href="#welcomePage" data-icon="home" data-direction="reverse" data-iconpos="notext"  >Home</a>
+      <a href="#optionsPage" data-icon='gear' >Options</a>
+      <h1>{{pageHeader}}</h1>
+    </div>
+</script>
+
+<script id="welcomeHeader" type="text/html">
+    <div data-role="header">
+      <a href="#optionsPage" class='ui-btn-right' data-icon='gear' >Options</a>
+      <h1>{{pageHeader}}</h1>
+    </div>
+</script>
+
+<script id="optionsHeader" type="text/html">
+  <div data-role="header">
+    <h1>{{pageHeader}}</h1>
+    <a href="#welcomePage" data-icon="home" data-direction="reverse" data-iconpos="notext"  >Home</a>
+  </div>
+</script>
+
+<!--CONTENT -->
+<script id="simpleContent" type="text/html">
+  <div data-role="content" id="{{containerID}}", style="{{style}}"></div>
+</script>
+
+<script id="optionsContent" type="text/html">
+  <div data-role="content">
+      <form id="optionsForm" action="#" method="get">
+        
+        <div data-role="fieldcontain">
+          <label for="ytkURLField"> Enter YourTapperKeeper URL:</label>
+          <input id="ytkURLField" type="text" name="ytkURLField" value="" />
+        </div>
+        
+        <div  data-role="fieldcontain" >
+          <label for="ytkURLSelect">or choose from the list:</label>
+          <select name="ytkURLSelect" id="ytkURLSelect">
+          </select>
+        </div>
+        
+        
+        <div data-role="fieldcontain">
+          <label for="dataProviderField">Enter data provider URL:</label>
+          <input id="dataProviderField" type="text" name="dataProviderField" value="" />
+        </div>
+        
+        <div  data-role="fieldcontain" >
+          <label for="dataProviderSelect">or choose from the list:</label>
+          <select name="dataProviderSelect" id="dataProviderSelect">
+          </select>
+        </div>
+        
+        <button type="submit" >Submit</button>
+      </form>
+      
+      <a href="#localArchivesPage" data-role="button">Show already analysed archives</a>
+      <button id="clearUserConfigButton" >Clear user config</button>
+  </div>
+</script>
+
+<script id="welcomeContent" type="text/html">
+    <div data-role="content">
+    <a href="#listArchivesPage" data-icon="grid" data-role="button" id="listHashtagsButton">List Hashtag Archives </a>
+    <p><center><strong>or</strong></center></p>
+
+      <form id="chooseArchiveForm" action="#" method="get">
+        <div data-role="fieldcontain">
+          <label for="hashtagField" alt="Hastag or Archive ID">Enter Hashtag:</label>
+          <input id="hashtagField" type="text" name="id" />
+        </div>
+        <div data-role="collapsible" data-collapsed="true" style="width: 98%; margin-left: auto; margin-right: auto;">
+          <h3>More Options</h3>
+          <div data-role="fieldcontain">
+  <label for="startDate">Start Date:</label>
+  <input name="startDate" id="startDate" type="date" data-role="datebox"
+     data-options='{"mode": "calbox","noButtonFocusMode": true}' >
+  </div>
+
+  <div data-role="fieldcontain">
+  <label for="endDate">Start Date:</label>
+  <input name="endDate" id="endDate" type="date" data-role="datebox"
+     data-options='{"mode": "calbox","noButtonFocusMode": true}' >
+  </div>
+
+  <div data-role="fieldcontain">
+      <label for="fromUserField">From User:</label>
+      <input type="text" name="from_user" id="fromUserField" value=""  />
+  </div>	
+  <div data-role="fieldcontain">
+      <label for="tweetTextField">Tweet Text:</label>
+      <input type="text" name="text" id="tweetTextField" value=""  />
+  </div>	
+
+  <div data-role="fieldcontain">
+      <fieldset data-role="controlgroup">
+        <legend>Order:</legend>
+            <input type="radio" name="o" id="searchOrderA" value="a"  />
+            <label for="searchOrderA">ascending</label>
+
+            <input type="radio" name="o" id="searchOrderD" checked="checked" value="d"  />
+            <label for="searchOrderD">descending</label>
+      </fieldset>
+  </div>
+
+  <div data-role="fieldcontain">
+    <label for="selectLimit" class="select">View Limit:</label>
+    <select name="l" id="selectLimit">
+    <option value=""></option>
+    <option value="10">10</option>
+    <option value="25">25</option>
+    <option value="50">50</option>
+    <option value="250">250</option>
+    <option value="500">500</option>
+    <option value="1000">1000</option>
+    <option value="10000">10000</option>
+    <option value="100000">100000</option>
+    <option value="1000000">1000000</option>
+    <option value="10000000">10000000</option>
+    </select>
+  </div>
+
+
+  <div data-role="fieldcontain">
+    <label for="selectLang" class="select">Language:</label>
+  <select name="lang" id="selectLang">
+  <option value=""></option>
+  <option value="aa">Afar (aa)</option><option value="ab">Abkhazian (ab)</option><option value="ae">Avestan (ae)</option><option value="af">Afrikaans (af)</option><option value="ak">Akan (ak)</option><option value="am">Amharic (am)</option><option value="an">Aragonese (an)</option><option value="ar">Arabic (ar)</option><option value="as">Assamese (as)</option><option value="av">Avaric (av)</option><option value="ay">Aymara (ay)</option><option value="az">Azerbaijani (az)</option>
+  <option value="ba">Bashkir (ba)</option><option value="be">Belarusian (be)</option><option value="bg">Bulgarian (bg)</option><option value="bh">Bihari (bh)</option><option value="bi">Bislama (bi)</option><option value="bm">Bambara (bm)</option><option value="bn">Bengali (bn)</option><option value="bo">Tibetan (bo)</option><option value="br">Breton (br)</option><option value="bs">Bosnian (bs)</option>
+  <option value="ca">Catalan (ca)</option><option value="ce">Chechen (ce)</option><option value="ch">Chamorro (ch)</option><option value="co">Corsican (co)</option><option value="cr">Cree (cr)</option><option value="cs">Czech (cs)</option><option value="cu">Church Slavic (cu)</option><option value="cv">Chuvash (cv)</option><option value="cy">Welsh (cy)</option>
+  <option value="da">Danish (da)</option><option value="de">German (de)</option><option value="dv">Divehi (dv)</option><option value="dz">Dzongkha (dz)</option>
+  <option value="ee">Ewe (ee)</option><option value="el">Greek (el)</option><option value="en">English (en)</option><option value="eo">Esperanto (eo)</option><option value="es">Spanish (es)</option><option value="et">Estonian (et)</option><option value="eu">Basque (eu)</option>
+  <option value="fa">Persian (fa)</option><option value="ff">Fulah (ff)</option><option value="fi">Finnish (fi)</option><option value="fj">Fijian (fj)</option><option value="fo">Faroese (fo)</option><option value="fr">French (fr)</option><option value="fy">Western Frisian (fy)</option>
+  <option value="ga">Irish (ga)</option><option value="gd">Scottish Gaelic (gd)</option><option value="gl">Galician (gl)</option><option value="gn">Guarani (gn)</option><option value="gu">Gujarati (gu)</option><option value="gv">Manx (gv)</option>
+  <option value="ha">Hausa (ha)</option><option value="he">Hebrew (he)</option><option value="hi">Hindi (hi)</option><option value="ho">Hiri Motu (ho)</option><option value="hr">Croatian (hr)</option><option value="ht">Haitian (ht)</option><option value="hu">Hungarian (hu)</option><option value="hy">Armenian (hy)</option><option value="hz">Herero (hz)</option>
+  <option value="ia">Interlingua  (ia)</option><option value="id">Indonesian (id)</option><option value="ie">Interlingue (ie)</option><option value="ig">Igbo (ig)</option><option value="ii">Sichuan Yi (ii)</option><option value="ik">Inupiaq (ik)</option><option value="io">Ido (io)</option><option value="is">Icelandic (is)</option><option value="it">Italian (it)</option><option value="iu">Inuktitut (iu)</option>
+  <option value="ja">Japanese (ja)</option><option value="jv">Javanese (jv)</option>
+  <option value="ka">Georgian (ka)</option><option value="kg">Kongo (kg)</option><option value="ki">Kikuyu (ki)</option><option value="kj">Kwanyama (kj)</option><option value="kk">Kazakh (kk)</option><option value="kl">Kalaallisut (kl)</option><option value="km">Khmer (km)</option><option value="kn">Kannada (kn)</option><option value="ko">Korean (ko)</option><option value="kr">Kanuri (kr)</option><option value="ks">Kashmiri (ks)</option><option value="ku">Kurdish (ku)</option><option value="kv">Komi (kv)</option><option value="kw">Cornish (kw)</option><option value="ky">Kirghiz (ky)</option>
+  <option value="la">Latin (la)</option><option value="lb">Luxembourgish (lb)</option><option value="lg">Ganda (lg)</option><option value="li">Limburgish (li)</option><option value="ln">Lingala (ln)</option><option value="lo">Lao (lo)</option><option value="lt">Lithuanian (lt)</option><option value="lu">Luba-Katanga (lu)</option><option value="lv">Latvian (lv)</option>
+  <option value="mg">Malagasy (mg)</option><option value="mh">Marshallese (mh)</option><option value="mi">Maori (mi)</option><option value="mk">Macedonian (mk)</option><option value="ml">Malayalam (ml)</option><option value="mn">Mongolian (mn)</option><option value="mr">Marathi (mr)</option><option value="ms">Malay (ms)</option><option value="mt">Maltese (mt)</option><option value="my">Burmese (my)</option>
+  <option value="na">Nauru (na)</option><option value="nb">Norwegian Bokmal (nb)</option><option value="nd">North Ndebele (nd)</option><option value="ne">Nepali (ne)</option><option value="ng">Ndonga (ng)</option><option value="nl">Dutch (nl)</option><option value="nn">Norwegian Nynorsk (nn)</option><option value="no">Norwegian (no)</option><option value="nr">South Ndebele (nr)</option><option value="nv">Navajo (nv)</option><option value="ny">Chichewa (ny)</option>
+  <option value="oc">Occitan (oc)</option><option value="oj">Ojibwa (oj)</option><option value="om">Oromo (om)</option><option value="or">Oriya (or)</option><option value="os">Ossetian (os)</option>
+  <option value="pa">Panjabi (pa)</option><option value="pi">Pali (pi)</option><option value="pl">Polish (pl)</option><option value="ps">Pashto (ps)</option><option value="pt">Portuguese (pt)</option>
+  <option value="qu">Quechua (qu)</option>
+  <option value="rm">Raeto-Romance (rm)</option><option value="rn">Kirundi (rn)</option><option value="ro">Romanian (ro)</option><option value="ru">Russian (ru)</option><option value="rw">Kinyarwanda (rw)</option>
+  <option value="sa">Sanskrit (sa)</option><option value="sc">Sardinian (sc)</option><option value="sd">Sindhi (sd)</option><option value="se">Northern Sami (se)</option><option value="sg">Sango (sg)</option><option value="si">Sinhala (si)</option><option value="sk">Slovak (sk)</option><option value="sl">Slovenian (sl)</option><option value="sm">Samoan (sm)</option><option value="sn">Shona (sn)</option><option value="so">Somali (so)</option><option value="sq">Albanian (sq)</option><option value="sr">Serbian (sr)</option><option value="ss">Swati (ss)</option><option value="st">Southern Sotho (st)</option><option value="su">Sundanese (su)</option><option value="sv">Swedish (sv)</option><option value="sw">Swahili (sw)</option>
+  <option value="ta">Tamil (ta)</option><option value="te">Telugu (te)</option><option value="tg">Tajik (tg)</option><option value="th">Thai (th)</option><option value="ti">Tigrinya (ti)</option><option value="tk">Turkmen (tk)</option><option value="tl">Tagalog (tl)</option><option value="tn">Tswana (tn)</option><option value="to">Tonga (to)</option><option value="tr">Turkish (tr)</option><option value="ts">Tsonga (ts)</option><option value="tt">Tatar (tt)</option><option value="tw">Twi (tw)</option><option value="ty">Tahitian (ty)</option>
+  <option value="ug">Uighur (ug)</option><option value="uk">Ukrainian (uk)</option><option value="ur">Urdu (ur)</option><option value="uz">Uzbek (uz)</option>
+  <option value="ve">Venda (ve)</option><option value="vi">Vietnamese (vi)</option><option value="vo">Volapuk (vo)</option>
+  <option value="wa">Walloon (wa)</option><option value="wo">Wolof (wo)</option>
+  <option value="xh">Xhosa (xh)</option>
+  <option value="yi">Yiddish (yi)</option><option value="yo">Yoruba (yo)</option>
+  <option value="za">Zhuang (za)</option><option value="zh">Chinese (zh)</option><option value="zu">Zulu (zu)</option>
+  </select>
+  </div>
+  <div data-role="fieldcontain">
+    <fieldset data-role="controlgroup">
+      <legend></legend>
+      <input type="checkbox" name="nort" id="nort" class="custom" />
+      <label for="nort">remove RTs</label>
+      </fieldset>
+  </div>
+
+        </div>
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+</script>
+
+<script id="listContent" type="text/html">
+  <div data-role="content">
+    <ul data-role="listview" data-filter="true" id="{{listId}}">
+    
+    </ul>
+  </div>
+</script>
+
+<script id="archivePageContent" type="text/html">
+  <div data-role="content">
+  
+    <div class = "ui-bar ui-bar-e" id="archieInfo-{{archive._id}}">
+      <center>
+        <p>{{archive.archive_info.description}}</p>
+        <p>"{{formatEpochTime archive.archive_info.create_time}}"</p>
+        <p>total number of tweets = <strong id="currentArchiveCount-{{archive._id}}">{{archive.archive_info.count}}</strong></p>
+      </center>
+
+    </div>
+    <!--
+    <div data-role="fieldcontain" id="downloadSliderBox">
+	    <label for="downloadSlider">Analyse Status:</label>
+ 	    <input type="range" name="slider" id="downloadSlider" value="0" min="0" max="100"  />
+    </div>
+    -->
+    {{>widgetList}}
+  </div>
+</script>
+
+<!--ELEMETNS -->
+<script id="archiveListElements" type="text/html">
+  {{#each entry}}
+  <li>
+    <a href="#page-{{laidHelper id}}">
+      <h3>{{keyword}} </h3>
+      <p>{{description}}</p>
+    </a>
+    <span class="ui-li-count"> {{formatNumber count}} </span>
+  </li>
+  {{/each}}
+</script>
+
+<script id="archiveLocalListElements" type="text/html">
+  {{#each entry}}
+    <li> 
+      <a href="#page-{{value/id}}">
+        <h3>{{value/keyword}} </h3>
+        <p>{{value/description}}</p>
+      </a>
+      <span class="ui-li-count"> {{formatNumber value/count}} </span>
+  </li>
+  {{/each}}
+</script>
+
+<script id="widgetListTemplate" type="text/html">
+    <ul data-role="listview" data-inset="true" id="archiveWidgetsList-{{archive._id}}">
+      <li><a href="#showMsgsPage-{{archive._id}}"> Browse Messages</a><span class="ui-li-count">{{archive.messagesSoFar}}</span></li>
+      <li><a href="#mapPage-{{archive._id}}"> Show Taged messages on the Map</a><span class="ui-li-count">{{archive.geoMarker.length}}</span></li>
+      <li><a href="#archiveLinksPage-{{archive._id}}"> Show the Links </a><span class="ui-li-count">{{archive.urls.length}}</span></li>
+      <li><a href="#archiveHashtagsPage-{{archive._id}}"> Show the Hashtags </a><span  class="ui-li-count">{{archive.hashtags.length}}</span></li>
+      <li><a href="#archiveMentionsPage-{{archive._id}}"> Show the Mentions </a><span  class="ui-li-count">{{archive.mentions.length}}</span></li>
+      <li><a href="#archiveUsersPage-{{archive._id}}"> Show the Users </a><span  class="ui-li-count">{{archive.users.length}}</span></li>    
+    </ul>
+</script>
+
+    <!-- entry.profile_image_url.replace("normal","bigger") -->
+<script id="msgEntryTemplate" type="text/html">
+  <li>
+
+    <img src="{{profile_image_url}}"  alt="Avatar {{from_user}}" >
+    <h3>{{from_user}}</h3>
+    <p>
+      <strong>{{{htmlLinksForText text}}}</strong>
+    </p>
+    <p>{{created_at}} Tweet id <a href="http://twitter.com/#!/{{from_user}}/status/{{id}}" target=\"_blank\">{{id}}}</a></p>
+    {{#if geo_coordinates_0}}
+    <p>
+      <a href = "#mapPage-{{laid}}" msgid="{{msgid}}">
+        geo info:{{geo_type}} - lat = {{geo_coordinates_0}} - long = {{geo_coordinates_1}}
+      </a>
+    </p>
+    {{/if}}
+  </li>
+</script>
+
+<!--FOOTER -->
+<script id="simpleFooter" type="text/html">
+  <div data-role="footer">
+    <h4>{{footerText}}</h4>
+  </div>
+</script>
+
+<script id="buttonFooter" type="text/html">
+  <div data-role="footer">
+    <h4><button type="submit" id="{{footerButtonId}}">{{footerButtonText}}</button></h4>
+  </div>
+</script>
+<script id="navbarArchiveListFooter"  type="text/html">
+  <div data-role="footer"  data-position="fixed">
+    <div data-role="navbar">
+      <ul>
+        <li><a href="#{{pageId}}" class="ui-btn-active">Alphabetic </a></li>
+        <li><a href="#{{pageId}}">Archive Size</a></li>
+        <li><a href="#{{pageId}}">Chronologic</a></li>
+      </ul>
+    </div><!-- /navbar -->
+  </div><!-- /footer -->
+</script>
 </body>
 </html>

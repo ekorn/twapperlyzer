@@ -7,7 +7,8 @@
     },
     "twapperlyzer":{
       "port": "3000",
-      "maxMessages": 500
+      "maxMessages": 500,
+      "archivesListsCacheTime": 10000
     },
     "couchdb": {
       "host": "",
