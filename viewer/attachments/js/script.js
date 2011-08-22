@@ -19,30 +19,23 @@ $(window).load(function(){
  
  //It will take the dbname out of the addressbar or if a vhost is used 
  //the  a rewrite rule set up in the couchdb 
-  mydb = $.couch.db(document.location.href.split('/')[3] || "dbname");
-  createPages();
-
-if(!_.isUndefined($_GET.laid)){
-  createArchivePage($_GET.laid);
-}
-
-  //Loading the different configs
-  mydb.openDoc("config",  
-    {success: 
-      function(configFromDb) {
-        config = configFromDb;
-      //if(typeof $_GET.ytkUrl != 'undefined')
-      loadUserConfig(function(err, result){
-        $.mobile.hidePageLoadingMsg();
-        if(err != null){
-          popErrorMessage("could not load user config: "+err+". Check you Options",3500);
-          //$.mobile.changePage("#optionsPage");
+var directUrl = document.location.href.split('/')[3];
+$.couch.db("dbname").info({
+    success: function(data) {
+        mydb = $.couch.db("dbname");
+        dbReady();
+    },
+    error: function(data){
+      $.couch.db(directUrl).info({
+        success: function(data) {
+            mydb = $.couch.db(directUrl);
+            dbReady();
         }
       });
-      }
     }
-  ); 
-
+});
+createPages();
+  
 /**
  * Event binding for the JQM Pages
  *
@@ -65,6 +58,7 @@ if(!_.isUndefined($_GET.laid)){
   //localArchives Page
   $('#localArchivesPage').live('pagebeforeshow',localArchivesPageHandler);
   $('#localArchiveList').delegate('a', 'click', selectedArchiveByList);
+
   
   //list Archives Page 
   $('#listArchivesPage').live('pagebeforeshow',listArchivesPageHandler);
@@ -87,8 +81,7 @@ if(!_.isUndefined($_GET.laid)){
 
 //===============END OF DOC READY===============
 
-//The very last thing to do is load the changes feed so webkit can be sure that the site is alredy fully loaded
-setTimeout(setUpChangesFeed, 500);
+
 });});
 
 
@@ -96,6 +89,31 @@ setTimeout(setUpChangesFeed, 500);
  * Loading and setting options
  *
  */
+
+function dbReady(){
+  //Loading the different configs
+  mydb.openDoc("config",  
+    {success: 
+      function(configFromDb) {
+        config = configFromDb;
+      //if(typeof $_GET.ytkUrl != 'undefined')
+      loadUserConfig(function(err, result){
+        $.mobile.hidePageLoadingMsg();
+        if(err != null){
+          popErrorMessage("could not load user config: "+err+". Check you Options",3500);
+          //$.mobile.changePage("#optionsPage");
+        }
+      });
+      }
+    }
+  ); 
+  
+  if(!_.isUndefined($_GET.laid)){
+    createArchivePage($_GET.laid);
+  }
+  //The very last thing to do is load the changes feed so webkit can be sure that the site is already fully loaded
+  setTimeout(setUpChangesFeed, 1000);
+}
 
 function setUpChangesFeed(){
   mydb.changes().onChange(function(changes) {
@@ -148,7 +166,6 @@ function createPages(){
   twapperSession.templates.archivePageContent = Handlebars.compile( $("#archivePageContent").html() );
   twapperSession.templates.widgetListTemplate = Handlebars.compile( $("#widgetListTemplate").html() );
   twapperSession.templates.archiveListElements = Handlebars.compile( $("#archiveListElements").html());
-  twapperSession.templates.archiveLocalListElements = Handlebars.compile( $("#archiveLocalListElements").html() );
   twapperSession.templates.simpleFooter = Handlebars.compile( $("#simpleFooter").html() );
   twapperSession.templates.buttonFooter = Handlebars.compile( $("#buttonFooter").html() );
   twapperSession.templates.navbarArchiveListFooter = Handlebars.compile( $("#navbarArchiveListFooter").html() );
@@ -192,19 +209,21 @@ function createPages(){
     "pageId":"localArchivesPage", 
     "pageHeader":"Analysed Archives in DB", 
     "listId":"localArchiveList", 
+    "navbarId" : "localArchivesNavbar",
     "footerText":""};
   
   $.mobile.pageContainer.append(twapperSession.templates.page(localArchivesPage));
   $('#localArchivesPage').page();
   
   //Archives List
-  var localArchivesPage = {
+  var archivesPage = {
     "pageId":"listArchivesPage", 
     "pageHeader":"Available Archives", 
-    "listId":"archivesList", 
+    "listId":"archivesList",
+    "navbarId" : "listArchivesNavbar",
     "footerText":""};
   
-  $.mobile.pageContainer.append(twapperSession.templates.page(localArchivesPage));
+  $.mobile.pageContainer.append(twapperSession.templates.page(archivesPage));
   $('#localArchivesPage').page();
   
   
@@ -232,7 +251,12 @@ function loadUserConfig(callback){
           userOptions.ytkUrl = twapperlyzerOptions.ytkUrl;
           userOptions.dataprovider = twapperlyzerOptions.dataprovider;
           twapperSession.ytkUrlHash = MD5(twapperlyzerOptions.ytkUrl);
-          twapperSession.archiveList = list;
+          twapperSession.archiveList = [];
+          _.each(list, function(listEntry){
+            listEntry.id = twapperSession.ytkUrlHash +"-"+listEntry.id;
+            twapperSession.archiveList.push(listEntry);
+          })
+
           $('#listHashtagsButton .ui-btn-text').text("List Hashtag Archives ("+twapperSession.archiveList.length+")");
           $('#ytkURLField').val(userOptions.ytkUrl);
           $('#dataProviderField').val(userOptions.dataprovider);
@@ -399,7 +423,13 @@ function clearUserConfigHandler(){
 function localArchivesPageHandler(){
   mydb.view("twapperlyzer/listArchives", {
       success: function(data) {
-        generateArchiveList($('#localArchiveList'), data.rows);//local archive id
+        twapperSession.localArchiveList =[];
+        
+        _.each(data.rows, function(localArchiveListEntry){
+          twapperSession.localArchiveList.push(localArchiveListEntry.value);
+        });
+
+        generateArchiveList($('#localArchiveList'), twapperSession.localArchiveList, null,"alphabetic" );//local archive id
       },
       error: function(status) {
           popErrorMessage("Clod not load Local Archives Analyses"+status, 3000)
@@ -412,43 +442,58 @@ function localArchivesPageHandler(){
  * List Archives Page:
  *
  */
- 
+
+function sortArchiveList(orderType){
+  var target;
+  if($.mobile.activePage.attr("id").split("-")[0] == "listArchivesPage"){
+    generateArchiveList($('#archivesList'), twapperSession.archiveList, orderType );
+  }else{
+    generateArchiveList($('#localArchiveList'), twapperSession.localArchiveList, orderType );
+  }
+}
  /**
  * Empty the #archivesList and fill it with the content of 
  * archiveList 
  *
  */
 function listArchivesPageHandler(event){
-  generateArchiveList($('#archivesList'), twapperSession.archiveList, twapperSession.ytkUrlHash);//your twapperkeeper archive id
+  generateArchiveList($('#archivesList'), twapperSession.archiveList, "alphabetic" );//your twapperkeeper archive id
 }
 
-function generateArchiveList(parent, data, hash){
-  Handlebars.registerHelper("laidHelper", function(id){ return hash+"-"+id});
+function generateArchiveList(parent, data, orderType){
   parent.empty();
-  var template;
-  if(hash != null){
-    template = twapperSession.templates.archiveListElements;
+  var template = twapperSession.templates.archiveListElements;
+
+  if(parent.attr("orderType") == orderType){
+    data.reverse();
   }else{
-    template = twapperSession.templates.archiveLocalListElements;
+    switch(orderType){
+      case "alphabetic" :
+        data.sort(compareKeywords);
+        parent.attr("orderType", orderType);
+      break;
+      case "size" :
+        data.sort(compareSize);
+        parent.attr("orderType", orderType);
+      break;
+      case "chronologic" :
+        data.sort(compareChronologic);
+        parent.attr("orderType", orderType);
+      break;
+    }
   }
-  
-  data.sort(compareSize);
+
+
   var archiveListData = {};
   archiveListData.entry = data;
   parent.append(template(archiveListData));
   parent.listview('refresh');
   
   function compareKeywords(a, b) {
-    if(_.isUndefined(a.value)){
-      var elementA = a.keyword.toLowerCase( );
-      var elementB = b.keyword.toLowerCase( );
-    }else{
-      var elementA = a.value.keyword.toLowerCase( );
-      var elementB = b.value.keyword.toLowerCase( );
-    }
-    elementA = cutFirstChar(elementA);
-    elementB = cutFirstChar(elementB);
     
+    var elementA = cutFirstChar(a.keyword.toLowerCase());
+    var elementB = cutFirstChar(b.keyword.toLowerCase());
+
     if (elementA < elementB) {return -1}
     if (elementA > elementB) {return 1}
     return 0;
@@ -461,27 +506,18 @@ function generateArchiveList(parent, data, hash){
     }
   }
   
+
   function compareSize(a, b) {
-    if(_.isUndefined(a.value)){
-      var elementA = a.count;
-      var elementB = b.count;
-    }else{
-      var elementA = a.value.count;
-      var elementB = b.value.count;
-    }
+    var elementA = a.count;
+    var elementB = b.count;
 
     return elementB - elementA;
-    
   }
   
   function compareChronologic(a, b) {
-    if(_.isUndefined(a.value)){
-      var elementA = a.id;
-      var elementB = b.id;
-    }else{
-      var elementA = a.value.id;
-      var elementB = b.value.id;
-    }
+    var elementA = a.id.split("-")[1];
+    var elementB = b.id.split("-")[1];
+
     return elementA - elementB;
   }
 }
@@ -499,6 +535,7 @@ function selectedArchiveByList(event) {
 }
 
 function createArchivePage(requestedLaid){
+
   var hashId = requestedLaid.split("-");
   twapperSession.laid = requestedLaid;
   if(twapperSession.lastLaid != twapperSession.laid){
@@ -569,7 +606,6 @@ function getArchiveFromDataprovider(selectedArchiveUrl,thisdb, dataprovider, cal
 
 
 function setData(data){
-
   if($('#page-'+data._id).length == 0){
     twapperSession.archives[data._id] = data;
     Handlebars.registerPartial('content', twapperSession.templates.archivePageContent);

@@ -272,7 +272,7 @@
 
 <script id="listContent" type="text/html">
   <div data-role="content">
-    <ul data-role="listview" data-filter="true" id="{{listId}}">
+    <ul data-role="listview" data-filter="true" id="{{listId}}" orderType="" >
     
     </ul>
   </div>
@@ -303,23 +303,11 @@
 <script id="archiveListElements" type="text/html">
   {{#each entry}}
   <li>
-    <a href="#page-{{laidHelper id}}">
+    <a href="#page-{{id}}">
       <h3>{{keyword}} </h3>
       <p>{{description}}</p>
     </a>
     <span class="ui-li-count"> {{formatNumber count}} </span>
-  </li>
-  {{/each}}
-</script>
-
-<script id="archiveLocalListElements" type="text/html">
-  {{#each entry}}
-    <li> 
-      <a href="#page-{{value/id}}">
-        <h3>{{value/keyword}} </h3>
-        <p>{{value/description}}</p>
-      </a>
-      <span class="ui-li-count"> {{formatNumber value/count}} </span>
   </li>
   {{/each}}
 </script>
@@ -369,11 +357,11 @@
 </script>
 <script id="navbarArchiveListFooter"  type="text/html">
   <div data-role="footer"  data-position="fixed">
-    <div data-role="navbar">
+    <div data-role="navbar" id="{{navbarId}}">
       <ul>
-        <li><a href="#{{pageId}}" class="ui-btn-active">Alphabetic </a></li>
-        <li><a href="#{{pageId}}">Archive Size</a></li>
-        <li><a href="#{{pageId}}">Chronologic</a></li>
+        <li><a href="#" onclick='sortArchiveList("alphabetic");' class="ui-btn-active">Alphabetic </a></li>
+        <li><a href="#" onclick='sortArchiveList("size");' >Archive Size</a></li>
+        <li><a href="#" onclick='sortArchiveList("chronologic");' >Chronologic</a></li>
       </ul>
     </div><!-- /navbar -->
   </div><!-- /footer -->
