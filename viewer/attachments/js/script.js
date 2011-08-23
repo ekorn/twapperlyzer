@@ -941,7 +941,7 @@ function getLaidFromPageName(){
 function createSelectedArchiveObject(array){
   res = new Object;
   var laid = twapperSession.ytkUrlHash+"-"+array[0].value;
-  res.entry = _.detect(from, function(le)
+  res.entry = _.detect(twapperSession.archiveList, function(le)
     {return le.id == laid});
 
   res.isSearch = false;
