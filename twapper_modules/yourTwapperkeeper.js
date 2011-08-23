@@ -24,7 +24,7 @@ function getArchive(selectedArchive, messagesSoFar, callback){
   }
   if(selectedArchive.limit >0){
     var url = selectedArchive.ytkUrl+apiGetTweets+selectedArchive.url+'&l='+Math.min(selectedArchive.limit,conf.twapperlyzer.maxMessages);
-    //Get the First results to show the user something
+
     helper.getJSON(url,function(jsondata){
       if(jsondata.status == "ok"){
         //If the archive is bigger download the missing
@@ -35,8 +35,9 @@ function getArchive(selectedArchive, messagesSoFar, callback){
           //Get the missing Messages
           var firstPartOfArchive = new helper.ResponseBean();
           firstPartOfArchive.data = jsondata.data;
+          //console.log("firstPartOfArchive",firstPartOfArchive.data.tweets.length, selectedArchive.limit);
           getMoreMsgs(selectedArchive,firstPartOfArchive,function(msgs){
-            if(firstPartOfArchive.status=="ok"){
+            if(firstPartOfArchive.status == "ok"){
               callback(firstPartOfArchive);
             }else{
               gettingArchiveFaild(firstPartOfArchive, callback);
@@ -65,7 +66,7 @@ function getArchive(selectedArchive, messagesSoFar, callback){
  * @param {`Function`} callback(`ResponseBean`) the complete set of messages or the error
  */
 function getMoreMsgs(selectedArchive, firstPartOfArchive, callback){
-  if(selectedArchive.limit>0){
+  if(selectedArchive.limit > 0){
   
     //sending the Download progress
     //everyone.now.sendDownloadProgress(getProgessInPercent(selectedArchive.limit,selectedArchive.totalMsgCount));
@@ -84,6 +85,7 @@ function getMoreMsgs(selectedArchive, firstPartOfArchive, callback){
           if(jsondata.status == "ok"){
             firstPartOfArchive.status = jsondata.status;
             firstPartOfArchive.data.tweets = firstPartOfArchive.data.tweets.concat(jsondata.data.tweets);
+            //console.log("firstPartOfArchive",firstPartOfArchive.data.tweets.length, selectedArchive.limit);
             //Decrising the amount of messages that still need to get downloaded 
             selectedArchive.limit=selectedArchive.limit-conf.twapperlyzer.maxMessages;
             getMoreMsgs(selectedArchive, firstPartOfArchive,callback);

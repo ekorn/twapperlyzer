@@ -1,34 +1,11 @@
- 
- /*
-  buildPage2(, , , );
-  var simplePage = Handlebars.compile( $("#page").html() );
-  Handlebars.registerPartial('content', $("#simpleContent").html());
-  Handlebars.registerPartial('footer', $("#simpleFooter").html());
-  */
-  //var mypage = {"pageID":"archiveMentionsPage", "headerText":"Mentions in Archive", "containerID":"archiveMentionsContainer","style":"margin: 0px auto; width: 320px; height: 400px; border: none;", "footerText":"Footer"};
- // $.mobile.pageContainer.append(simplePage(mypage));
-  //$('#archiveMentionsPage').page();
-  
-  
-  //$.mobile.pageContainer.append();
-  //$('#archiveMentionsPage').page();
-  /*
-  $.mobile.pageContainer.append(buildPage("archiveHashtagsPage", "archiveHashtagsContainer", "Hastags in the Archive", "margin: 0px auto; width: 320px; height: 400px; border: none;"));
-  $('#archiveHashtagsPage').page();
-  $.mobile.pageContainer.append(buildPage("archiveLinksPage", "archiveLinksContainer", "Links in the Archive", "width: 98%; height: 80%; margin: 0  auto"));
-  $('#archiveLinksPage').page();
-  $.mobile.pageContainer.append(buildPage("localArchivesPage", "localArchivesContainer", "Analysed Archives", ""));
-  $('#localArchivesContainer').append('<ul data-role="listview" data-filter="true" id="localArchiveList"></ul>');
-  
-  $('#localArchivesPage').page();
-*/
 
-function addUrlChart(){
-  $('#archiveLinksContainer').html('');
-  $('#archiveLinksCount').text(formatNumber(currentArchive.urls.length));
+function addUrlChart(containerId, urls, showLimit){
+  //console.log("addUrlChart",containerId,$('#'+containerId), urls, showLimit);
+  $('#'+containerId).html('');
+
   var chartOptions = {
     chart: {
-        renderTo: 'archiveLinksContainer',
+        renderTo: containerId,
         plotBackgroundColor: null,
         plotBorderWidth: null,
         plotShadow: false
@@ -80,7 +57,7 @@ function addUrlChart(){
     data: []
   };
   
-  _.each(_.first(currentArchive.urls, userOptions.showLimit), function(url){
+  _.each(_.first(urls, showLimit), function(url){
     series.data.push([ url.text, url.weight]);
   });
   chartOptions.series.push(series);
@@ -95,9 +72,9 @@ function addUrlChart(){
  *  -a red one for more Peaple at the same place
  *
  */
-function setUpGeoMarkerForArchive(){
-  var data = currentArchive.geoMarker;
-  setUpMap();
+function setUpGeoMarkerForArchive(data, mapContainerId){
+
+  setUpMap(mapContainerId);
   map.setView(new L.LatLng(51.719444, 8.757222,true), 2);
   var colorMarker = L.Icon.extend({
     iconUrl: '',
@@ -131,10 +108,7 @@ function setUpGeoMarkerForArchive(){
     }
     marker.bindPopup(text,{autoPan:false});  
     map.addLayer(marker);
-    //console.log("marker",marker);
   }
-  $.mobile.changePage("#mapPage");
-    
 }
 
 
@@ -150,9 +124,9 @@ function setUpGeoMarkerForArchive(){
  *
  * @param {Object} entry The message Object from a archive of a ytk instance
  */
-function setUpMap(entry){
-  var mapContainer = $('#mapContainer');
-  
+function setUpMap(mapContainerId){
+  var mapContainer = $('#'+mapContainerId);
+  //console.log("setUpMap",mapContainerId, mapContainer);
   //Adjust the map container to the maximum
   var usedHeight = 0;
         
@@ -164,11 +138,11 @@ function setUpMap(entry){
   
   //clear the old map data
   if (map) {
-      $('#mapContainer').html('');
+      mapContainer.html('');
     }
     
   // initialize the map on the "map" div
-  map = new L.Map('mapContainer');
+  map = new L.Map(mapContainerId);
   
   // create a CloudMade tile layer
   var cloudmadeUrl = 'http://{s}.tile.cloudmade.com/d692a017c2bc4e45a59d57699d0e0ea7/997/256/{z}/{x}/{y}.png',
@@ -177,6 +151,7 @@ function setUpMap(entry){
       
   // add the CloudMade layer to the map
   map.addLayer(cloudmade);
+  map.setView(new L.LatLng("51.706764", "8.771238",true), 13);
 }
 
 function getAvantarMarker(msgLocation, text, imageUrl){

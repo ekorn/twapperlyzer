@@ -181,7 +181,7 @@ function updateArchiveHandler(req, res){
   check(req.query.l, "Parameter error: in limit").isInt();
   if(exist(req.query.dbHost)){
     check(req.query.dbname).notNull();
-    check(req.query.dbHost).isUrl();
+    //check(req.query.dbHost).isUrl();
 
     if(exist(req.query.callback)) check(req.query.callback).notEmpty();
     if(exist(req.query.dbUser)) check(req.query.dbUser).notEmpty();
@@ -318,7 +318,7 @@ function parameterCheck(req){
     if(exist(req.query.callback)) check(req.query.callback).notEmpty();
     //DB Params
     if(exist(req.query.dbHost)) {
-      check(req.query.dbHost).isUrl();
+      //check(req.query.dbHost).isUrl();
       check(req.query.dbname).notNull();
 
       if(exist(req.query.dbUser)) check(req.query.dbUser).notEmpty();

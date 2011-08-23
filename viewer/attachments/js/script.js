@@ -17,8 +17,8 @@ $(window).load(function(){
  *
  */
  
- //It will take the dbname out of the addressbar or if a vhost is used 
- //the  a rewrite rule set up in the couchdb 
+ // if a vhost is used the a rewrite rule set up in couchdb link to the 
+ //db otherwise it will take the dbname out of the addressbar
 var directUrl = document.location.href.split('/')[3];
 $.couch.db("dbname").info({
     success: function(data) {
@@ -73,8 +73,7 @@ createPages();
     
   // Show Msg Page
  
-  //Copy the coordinates from the link and prepare the map
-  $('#msgList').delegate('a', 'click', exportMessageEntry);
+
 
 //UNSORTED
       $(document).bind("scrollstop", loadMsgAtPageEnd);
@@ -162,6 +161,7 @@ function createPages(){
   twapperSession.templates.page = Handlebars.compile( $("#page").html() );
   twapperSession.templates.normalHeader = Handlebars.compile( $("#normalHeader").html() );
   twapperSession.templates.msgEntryTemplate = Handlebars.compile( $("#msgEntryTemplate").html() );
+  twapperSession.templates.simpleContent = Handlebars.compile( $("#simpleContent").html() );
   twapperSession.templates.listContent = Handlebars.compile( $("#listContent").html() );
   twapperSession.templates.archivePageContent = Handlebars.compile( $("#archivePageContent").html() );
   twapperSession.templates.widgetListTemplate = Handlebars.compile( $("#widgetListTemplate").html() );
@@ -253,6 +253,7 @@ function loadUserConfig(callback){
           twapperSession.ytkUrlHash = MD5(twapperlyzerOptions.ytkUrl);
           twapperSession.archiveList = [];
           _.each(list, function(listEntry){
+            listEntry.aId = listEntry.id;
             listEntry.id = twapperSession.ytkUrlHash +"-"+listEntry.id;
             twapperSession.archiveList.push(listEntry);
           })
@@ -297,7 +298,12 @@ function chooseArchiveFormHandler(event){
       popErrorMessage("Can't analyse this archive",500);
     }else{
       twapperSession.selectedArchive = createSelectedArchiveObject(chooseArchiveFormVars);
-      $.mobile.changePage("#showArchivePage");
+      
+      if(twapperSession.selectedArchive.isSearch){
+        popErrorMessage("Not implemented at the moment",1500);
+      }else{
+        createArchivePage(twapperSession.selectedArchive.entry.id);
+      }
     }
   }
 }
@@ -333,9 +339,10 @@ function validateHashtagField(value, archiveList){
  * @return {Number|String} the id or the string "error" 
  */
 function getYTKID(value, archiveList){
+  
   for (var i=0; i<archiveList.length; i++){
     if(archiveList[i].keyword.toLowerCase() ==value.toLowerCase()  || archiveList[i].keyword.substring(1, archiveList[i].keyword.length).toLowerCase()  == value.toLowerCase() ){
-      return archiveList[i].id;
+      return archiveList[i].id.split("-")[1];
     }
   }
   return "error";
@@ -543,11 +550,11 @@ function createArchivePage(requestedLaid){
       {success: function(data) {
           setData(data);
           if (twapperSession.ytkUrlHash != null){
-            
-            if(twapperSession.ytkUrlHash == hashId[0] && twapperSession.archiveList[hashId[1]-1].id == hashId[1]){
-              if(data.messagesSoFar != twapperSession.archiveList[hashId[1]-1].count){
+            var listEntry = _.detect(twapperSession.archiveList, function(le){return le.id == requestedLaid});
+            if(twapperSession.ytkUrlHash == hashId[0] && !_.isUndefined(listEntry)){
+              if(data.messagesSoFar != listEntry.count){
                 console.log("");
-                var url = "docID="+requestedLaid+"&l="+twapperSession.archiveList[hashId[1]-1].count;
+                var url = "docID="+requestedLaid+"&l="+listEntry.count;
                 updateArchive(url,config.thisdb, userOptions.dataprovider, function(err, result){
                   if(err!=null){
                     popErrorMessage("Could not update this archive: "+err.msg, 2000);
@@ -608,6 +615,8 @@ function getArchiveFromDataprovider(selectedArchiveUrl,thisdb, dataprovider, cal
 function setData(data){
   if($('#page-'+data._id).length == 0){
     twapperSession.archives[data._id] = data;
+    
+    //Main Archive Page
     Handlebars.registerPartial('content', twapperSession.templates.archivePageContent);
     Handlebars.registerPartial('widgetList', twapperSession.templates.widgetListTemplate);
     
@@ -623,6 +632,17 @@ function setData(data){
     twapperSession.archives[data._id].currentMsg = 0;
     $('#page-'+data._id).page();
     $('#archiveWidgetsList-'+data._id).delegate('a', 'click', archiveWidgetsListHandler);
+    // Map Page
+    Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+    Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+    var mapPage = {
+      "pageId":"mapPage-"+data._id, 
+      "pageHeader":"Map", 
+      "containerId":"mapContainer-"+data._id,
+      "style" : ""
+      };
+    $.mobile.pageContainer.append(twapperSession.templates.page(mapPage));
+    $("#mapPage-"+data._id).page();
   }else{
     console.log("Update....");//FIXME
     var tmp = twapperSession.archives[data._id].currentMsg ;
@@ -731,48 +751,95 @@ function archiveWidgetsListHandler(event){
   var pageHashId = target.split("-");
   var laid = pageHashId[1]+"-"+pageHashId[2];
 
-  if($(target).length == 0){
+
     switch(pageHashId[0]){
+      
       case "#showMsgsPage" :
-        Handlebars.registerPartial('content', twapperSession.templates.listContent);
-        Handlebars.registerPartial('footer', twapperSession.templates.buttonFooter);
-        var showMsgsPage = {
-          "pageId":"showMsgsPage-"+laid, 
-          "pageHeader":"Messgaes", 
-          "listId":"msgList-"+laid, 
-          "footerButtonId":"moreMsgsButton-"+laid,
-          "footerButtonText": "More Messages"
-          };
-        $.mobile.pageContainer.append(twapperSession.templates.page(showMsgsPage));
-        $(target).page();
-        $.mobile.changePage(target);
-        $("#moreMsgsButton-"+laid).click(loadMessagesFromServer);
-        loadMessagesFromServer();
+        if($(target).length == 0){
+          Handlebars.registerPartial('content', twapperSession.templates.listContent);
+          Handlebars.registerPartial('footer', twapperSession.templates.buttonFooter);
+          var showMsgsPage = {
+            "pageId":"showMsgsPage-"+laid, 
+            "pageHeader":"Messgaes", 
+            "listId":"msgList-"+laid, 
+            "footerButtonId":"moreMsgsButton-"+laid,
+            "footerButtonText": "More Messages"
+            };
+          $.mobile.pageContainer.append(twapperSession.templates.page(showMsgsPage));
+          $(target).page();
+          
+          //Copy the coordinates from the link and prepare the map
+          $('#msgList-'+laid).delegate('a', 'click', exportMessageEntry);
+          
+          $("#moreMsgsButton-"+laid).click(loadMessagesFromServer);
+          $.mobile.changePage(target);
+          loadMessagesFromServer();
+        }else{
+          $.mobile.changePage(target);
+        }
       break;
       
+      case "#mapPage" :
+        setUpGeoMarkerForArchive(twapperSession.archives[laid].geoMarker,'mapContainer-'+laid)
+        $.mobile.changePage(target);
+      break;
+      
+      case "#archiveMentionsPage" :
+        if($(target).length == 0){
+          Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+          Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+          var mentionsPage = {
+          "pageId":"archiveMentionsPage-"+laid, 
+          "pageHeader":"Mentions in Archive", 
+          "containerId":"archiveMentionsContainer-"+laid,
+          "style":"margin: 0px auto; width: 320px; height: 400px; border: none;", 
+          "footerText":""
+          };
+          $.mobile.pageContainer.append(twapperSession.templates.page(mentionsPage));
+          $(target).page();
+          
+          $("#archiveMentionsContainer-"+laid).jQCloud(_.first(twapperSession.archives[laid].mentions, userOptions.showLimit));
+          
+          $.mobile.changePage(target);
+        }else{
+          $.mobile.changePage(target);
+        }
+      break;
+      case "#archiveHashtagsPage" :
+        if($(target).length == 0){
+          Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+          Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+          var hashtagsPage = {
+          "pageId":"archiveHashtagsPage-"+laid, 
+          "pageHeader":"Hastags in the Archive", 
+          "containerId":"archiveHashtagsContainer-"+laid,
+          "style":"margin: 0px auto; width: 320px; height: 400px; border: none;", 
+          "footerText":""
+          };
+          $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
+          $(target).page();
+          $("#archiveHashtagsContainer-"+laid).jQCloud(_.first(twapperSession.archives[laid].hashtags, userOptions.showLimit));
+          $.mobile.changePage(target);
+        }else{
+          $.mobile.changePage(target);
+        }
+      break;
+      case "#archiveLinksPage" :
+        Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+        Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+        var linksPage = {
+        "pageId":"archiveLinksPage-"+laid, 
+        "pageHeader":"Links in the Archive", 
+        "containerId":"archiveLinksContainer-"+laid,
+        "style":"width: 98%; height: 80%; margin: 0  auto",
+        "footerText":""
+        };
+        $.mobile.pageContainer.append(twapperSession.templates.page(linksPage));
+        $(target).page();
+        addUrlChart("archiveLinksContainer-"+laid, twapperSession.archives[laid].urls, userOptions.showLimit);
+        $.mobile.changePage(target);
+      break;
     }
-  }else{
-    $.mobile.changePage(target);
-  }
-  /*
-  if(target == "#mapPage"){
-    setUpGeoMarkerForArchive();
-  }else if(target == "#showMsgsPage"){
-    $.mobile.changePage(target);
-  }else if(target == "#archiveLinksPage"){
-    $.mobile.changePage(target);
-  }else if(target == "#archiveHashtagsPage"){
-    $.mobile.changePage(target);
-    $("#archiveHashtagsContainer").html("");
-    $("#archiveHashtagsContainer").jQCloud(_.first(currentArchive.hashtags, userOptions.showLimit));
-  }else if(target == "#archiveMentionsPage"){
-    $.mobile.changePage(target);
-    $("#archiveHashtagsContainer").html("");
-    $("#archiveMentionsContainer").jQCloud(_.first(currentArchive.mentions, userOptions.showLimit));
-  }else if(target == "#archiveUsersPage"){
-    $.mobile.changePage(target);
-  }
-  */
 }
 
 
@@ -781,21 +848,6 @@ function archiveWidgetsListHandler(event){
  *
  */
 
-
-
-/**
- * create a string with a list entry (html code)  for a message object
- *
- */
-function getMsgEntryHTML(entry){
-  var entryHtml = ["<li ><img src=", entry.profile_image_url.replace("normal","bigger"), "> <h3>",entry.from_user,"</h3><p><strong>",getHTMLLinksForText(entry.text),"</strong></p><p>",entry.created_at," Tweet id <a href=\"http://twitter.com/#!/",entry.from_user,"/status/",entry.id,"\" target=\"_blank\">",entry.id,"</a></p>"].join("");
-
-  if(entry.geo_coordinates_0 != 0 ){
-    entryHtml = [entryHtml, '<p><a href="#mapPage" msgid="',entry.msgid,'">geo info:',entry.geo_type," - lat = ", entry.geo_coordinates_0," - long = ",entry.geo_coordinates_1,"</p>"].join("");
-  }
-  entryHtml = [entryHtml,"</li>"].join("");
-  return entryHtml;
-}
 
 
  /**
@@ -822,7 +874,7 @@ function loadMsgAtPageEnd() {
  * 
  */
 function loadMessagesFromServer(){
-  laid = $.mobile.activePage.attr("id").split("showMsgsPage-")[1];
+  var laid = getLaidFromPageName();
   var currentArchive = twapperSession.archives[laid];
   var lastID=0;
   if(currentArchive.tweets.length != 0 ){
@@ -845,7 +897,6 @@ function loadMessagesFromServer(){
           entry.geo_coordinates_0 = false;
         }
         msgList.append(twapperSession.templates.msgEntryTemplate(entry));
-        //msgList.append(getMsgEntryHTML(entry));
       }
       
       msgList.listview('refresh');
@@ -861,104 +912,23 @@ function loadMessagesFromServer(){
  */
 function exportMessageEntry(event) {  
   if ($(this).attr("msgid") != null){
+    var laid = getLaidFromPageName();
     // set the map view to a given center and zoom and add the CloudMade layer
-    var entry = currentArchive.tweets[$(this).attr("msgid")];
-    setUpMap();
+    var entry = twapperSession.archives[laid].tweets[$(this).attr("msgid")];
+    setUpMap('mapContainer-'+laid);
     var msgLocation = new L.LatLng(entry.geo_coordinates_0, entry.geo_coordinates_1,true);
     map.setView(msgLocation, 13);
     map.addLayer(getAvantarMarker(msgLocation, getHTMLLinksForText(entry.text), entry.profile_image_url));
+    
   }
 }
 
 
 
-/**
- * General JQM Helper Functions:
- *
- */
-
-/**
- * Fill a form select element with the data.
- *
- * @param {jquery Object} selectElement The html select element as Jquery Object
- * @param {Array} data A array of Strings.
- */
-function fillSelect(selectElement, data){
-  selectElement.empty();
-  selectElement.append('<option value=""></option>');
-  _.each(data, function (element){
-    selectElement.append("<option>"+element+"</option>");
-  });
-  selectElement.selectmenu('refresh');
+function getLaidFromPageName(){
+  var tmp = $.mobile.activePage.attr("id").split("-");
+  return tmp[1]+"-"+tmp[2];
 }
-
-/**
- * The standard error message  
- *
- * @param {String} errorMessage
- * @param {Number} stay The time the popup should be shown.
- */
-function popErrorMessage(errorMessage,stay){
-  popMessage(errorMessage, stay, "ui-body-e");
-}
-
-/**
- * The standard message  
- *
- * @param {String} simpleMessage
- * @param {Number} stay The time the popup should be shown.
- */
-function popSimpleMessage(simpleMessage,stay) {
-  popMessage(simpleMessage, stay, "ui-body-b");
-}
-
-/**
- * The standard message  
- *
- * @param {String} myMessage
- * @param {Number} stay The time the popup should be shown.
- * @param {String} theme The JQM theme of the popup
- */
-function popMessage(myMessage,stay, theme) {
-  $("<div class='ui-loader ui-overlay-shadow "+ theme +" ui-corner-all'><h1>" + myMessage + "</h1></div>")
-  .css({
-    display: "block",
-    opacity: 0.96,
-    top: window.pageYOffset+100
-  })
-  .appendTo("body").delay(stay)
-  .fadeOut(800, function(){
-      $(this).remove();
-  });
-}
-
-/**
- * General Non-JQM Helper Functions:
- *
- */
- 
- /**
- * Serach in a text for
- * - #
- * - @
- * - http
- * and make a html link for them.
- *
- * @param {String} text A Text without html Links
- * @return {String} text A Text with html Links 
- */
-function getHTMLLinksForText(text){
-  var urls = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-  var usernames = /(^|\s)@(\w+)/g;
-  var hashtags = /(^|\s)#(\w+)/g;
-
-  //URLs have to be replaced first other wise it will replace more than it should
-  var text = text.replace(urls,         "<a href='$1' target=\"_blank\">$1</a>");
-  var text = text.replace(usernames, "$1@<a href='http://www.twitter.com/$2' target=\"_blank\">$2</a>");
-  var text = text.replace(hashtags , "$1#<a href='http://search.twitter.com/search?q=%23$2' target=\"_blank\" >$2</a>");
-  return text;
-}
-
  /**
  * transform a array to a selected archive object that always include
  * - the id
@@ -970,97 +940,34 @@ function getHTMLLinksForText(text){
  */
 function createSelectedArchiveObject(array){
   res = new Object;
-  res.id = array[0].value;
+  var laid = twapperSession.ytkUrlHash+"-"+array[0].value;
+  res.entry = _.detect(from, function(le)
+    {return le.id == laid});
+
+  res.isSearch = false;
   url = "ytkUrl="+userOptions.ytkUrl;
-  
+
   _.each(array, function(element){
       //every fild that is set will get in the url
       if(element.value != ""){
         url += "&"+element.name+"="+element.value;
+        if(!element.value == "o"){
+          res.isSearch = true;
+        }
       }
       if(element.name == "nort" && element.value != null){
          url += "&"+element.name+"="+element.value;
+         res.isSearch = true;
       }
       //and the limit even if it is not set
       if(element.name == "l" && element.value == ""){
-        url += "&l="+ twapperSession.archiveList[res.id-1].count;
+        url += "&l="+ res.entry.count;
       }
     });
   res.url = url;
   return res;
 }
 
- /**
- * format a number for better readability.
- *
- * @param {Number} num
- * @param {String} prefix Optional 
- * @return {String} formatted number
- */
-function formatNumber(num){
-   num += '';
-   var splitStr = num.split('.');
-   var splitLeft = splitStr[0];
-   var splitRight = splitStr.length > 1 ? '.' + splitStr[1] : '';
-   var regx = /(\d+)(\d{3})/;
-   while (regx.test(splitLeft)) {
-      splitLeft = splitLeft.replace(regx, '$1' + ',' + '$2');
-   }
-   return splitLeft + splitRight;
-}
-
- /**
- * remove all chars except numbers.
- *
- * @param {String} num
- * return {Number} num
- */
-function unformatNumber(num) {
-   return num.replace(/([^0-9\.\-])/g,'')*1;
-}
-
-
- /**
- * get a GET Query String and create a object with parameter as fields. 
- * 
- * 
- * @param {String} qs Like ?id=1&foo=bar
- * @return {Object} params
- */
-function getQueryParams(qs) {
-  qs = qs.split("+").join(" ");
-
-  var params = {};
-  var tokens,
-  re = /[?&]?([^=]+)=([^&]*)/g;
-
-  while (tokens = re.exec(qs)) {
-    params[decodeURIComponent(tokens[1])]
-    = decodeURIComponent(tokens[2]);
-  }
-
-  return params;
-}
-
- /**
- * A simple check if a String is a url
- * 
- * 
- * @param {String} str
- * @return {Boolean}
- */
-function isUrl(str) {
-var v = new RegExp();
-v.compile("^[A-Za-z]+://[A-Za-z0-9-_]+\\.[A-Za-z0-9-_%&\?\/.=]+$");
-if (!v.test(str)) {
-return false;
-}
-return true;
-}
-
-function copyToClipboard (text) {
-  window.prompt ("Copy to clipboard: ", text);
-}
 
 /**
  * Own Objects 
