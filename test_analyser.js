@@ -43,6 +43,17 @@ var regExUrls = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/?[-a-zA-Z0-9@
 console.log(text.match(regExUrls));
 */
 
-unshortener.expand("http://cscw2011wiki.org/", function (realUrl) {
+unshortener.expand("http://t.co/Bus0jNn", function (realUrl) {
   console.log("realUrl",realUrl);
 });
+
+// expand an URL
+     var unshortener = require('unshortener');
+
+     // you can pass in a url object or string
+     unshortener.expand('http://t.co/rWP6BP3',
+                        function (url) {
+                             // url is a url object
+                             console.log(url);
+                        });
+                        

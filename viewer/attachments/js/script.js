@@ -5,8 +5,9 @@ var userOptions = {};
 var config;
 var mydb;
 var twapperSession = new Object(); //The temporary variable where all the session data is stored
-twapperSession.archiveList;
+twapperSession.archiveList = [];
 twapperSession.archives = [];
+twapperSession.localArchiveList =[];
 
   
 $(window).load(function(){ 
@@ -23,13 +24,13 @@ var directUrl = document.location.href.split('/')[3];
 $.couch.db("dbname").info({
     success: function(data) {
         mydb = $.couch.db("dbname");
-        dbReady();
+        dbReady(data);
     },
     error: function(data){
       $.couch.db(directUrl).info({
         success: function(data) {
             mydb = $.couch.db(directUrl);
-            dbReady();
+            dbReady(data);
         }
       });
     }
@@ -40,8 +41,6 @@ createPages();
  * Event binding for the JQM Pages
  *
  */
-  //Welcome Page
-  $( '#chooseArchiveForm :submit' ).click(chooseArchiveFormHandler); 
 
   // Options Page
   $('#optionsPage').live('pagebeforeshow',optionsPageHandler);
@@ -54,12 +53,7 @@ createPages();
     $("#dataProviderField").val($(this).val());
   });
   $('#clearUserConfigButton').click(clearUserConfigHandler)
-  
-  //localArchives Page
-  $('#localArchivesPage').live('pagebeforeshow',localArchivesPageHandler);
-  $('#localArchiveList').delegate('a', 'click', selectedArchiveByList);
 
-  
   //list Archives Page 
   $('#listArchivesPage').live('pagebeforeshow',listArchivesPageHandler);
   $('#archivesList').delegate('a', 'click', selectedArchiveByList);
@@ -89,7 +83,8 @@ createPages();
  *
  */
 
-function dbReady(){
+function dbReady(info){
+  
   //Loading the different configs
   mydb.openDoc("config",  
     {success: 
@@ -98,18 +93,41 @@ function dbReady(){
       //if(typeof $_GET.ytkUrl != 'undefined')
       loadUserConfig(function(err, result){
         $.mobile.hidePageLoadingMsg();
+        
         if(err != null){
           popErrorMessage("could not load user config: "+err+". Check you Options",3500);
           //$.mobile.changePage("#optionsPage");
+          if(_.isUndefined($_GET.laid)){
+            $.mobile.changePage('#listArchivesPage',{ transition: "fade"} );
+          }
+        }else{
+          if(_.isUndefined($_GET.laid)){
+            $.mobile.changePage('#listArchivesPage',{ transition: "fade"} );
+          }
         }
       });
       }
     }
   ); 
   
+  //Load the archive List from the DB
+  
+  mydb.view("twapperlyzer/listArchives", {
+      success: function(data) {
+        _.each(data.rows, function(localArchiveListEntry){
+          twapperSession.localArchiveList.push(localArchiveListEntry.value);
+        });
+      },
+      error: function(status) {
+          popErrorMessage("Clod not load already analysed archives"+status, 3000)
+      }
+  });
+  
+  //Move to the requited laid
   if(!_.isUndefined($_GET.laid)){
     createArchivePage($_GET.laid);
   }
+  
   //The very last thing to do is load the changes feed so webkit can be sure that the site is already fully loaded
   setTimeout(setUpChangesFeed, 1000);
 }
@@ -162,69 +180,53 @@ function createPages(){
   twapperSession.templates.normalHeader = Handlebars.compile( $("#normalHeader").html() );
   twapperSession.templates.msgEntryTemplate = Handlebars.compile( $("#msgEntryTemplate").html() );
   twapperSession.templates.simpleContent = Handlebars.compile( $("#simpleContent").html() );
+  twapperSession.templates.blockListContent = Handlebars.compile( $("#blockListContent").html() );
   twapperSession.templates.listContent = Handlebars.compile( $("#listContent").html() );
   twapperSession.templates.archivePageContent = Handlebars.compile( $("#archivePageContent").html() );
   twapperSession.templates.widgetListTemplate = Handlebars.compile( $("#widgetListTemplate").html() );
   twapperSession.templates.archiveListElements = Handlebars.compile( $("#archiveListElements").html());
   twapperSession.templates.simpleFooter = Handlebars.compile( $("#simpleFooter").html() );
   twapperSession.templates.buttonFooter = Handlebars.compile( $("#buttonFooter").html() );
+  twapperSession.templates.buttonLinkFooter = Handlebars.compile( $("#buttonLinkFooter").html() );
+  
   twapperSession.templates.navbarArchiveListFooter = Handlebars.compile( $("#navbarArchiveListFooter").html() );
+  twapperSession.templates.navbarMemberFooter = Handlebars.compile( $("#navbarMemberFooter").html() );
 
   
+  //Elements
+  twapperSession.templates.simpleList = Handlebars.compile( $("#simpleList").html() );
   
   
   
   Handlebars.registerPartial('header', $("#optionsHeader").html());
   Handlebars.registerPartial('content', $("#optionsContent").html());
-  Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+  Handlebars.registerPartial('footer', twapperSession.templates.buttonLinkFooter);
 
   //Options Page
   var optionsPage = {
     "pageId":"optionsPage", 
     "pageHeader":"Options",
-    "footerText":""};
+    "target": "#about",
+    "footerButtonText":"About twapperlyzer"};
     
   $.mobile.pageContainer.append(twapperSession.templates.page(optionsPage));
   $('#optionsPage').page();
 
+  //Archives List
 
-
-  //WelcomePage
-  Handlebars.registerPartial('header', $("#welcomeHeader").html());
-  Handlebars.registerPartial('content', $("#welcomeContent").html());
-  var welcomePage = {
-    "pageId":"welcomePage", 
-    "pageHeader":"Twapperlyzer",
-    "footerText":""};
-    
-  $.mobile.pageContainer.append(twapperSession.templates.page(welcomePage));
-  $('#welcomePage').page();
-  
-  //Local Archives List
   Handlebars.registerPartial('header', twapperSession.templates.normalHeader);
   Handlebars.registerPartial('content', twapperSession.templates.listContent);
   Handlebars.registerPartial('footer',   twapperSession.templates.navbarArchiveListFooter);
-
-  var localArchivesPage = {
-    "pageId":"localArchivesPage", 
-    "pageHeader":"Analysed Archives in DB", 
-    "listId":"localArchiveList", 
-    "navbarId" : "localArchivesNavbar",
-    "footerText":""};
   
-  $.mobile.pageContainer.append(twapperSession.templates.page(localArchivesPage));
-  $('#localArchivesPage').page();
-  
-  //Archives List
   var archivesPage = {
     "pageId":"listArchivesPage", 
     "pageHeader":"Available Archives", 
     "listId":"archivesList",
-    "navbarId" : "listArchivesNavbar",
-    "footerText":""};
+    "navbarId" : "listArchivesNavbar"
+    };
   
   $.mobile.pageContainer.append(twapperSession.templates.page(archivesPage));
-  $('#localArchivesPage').page();
+  $('#listArchivesPage').page();
   
   
 }
@@ -243,9 +245,7 @@ function loadUserConfig(callback){
   });
   twapperlyzerStore.get('twapperlyzerOnlineOptions', function(twapperlyzerOptions) {
     if(twapperlyzerOptions != null){
-      if(_.isUndefined($_GET.laid)){
-        $.mobile.changePage('#welcomePage',{ transition: "fade"} );
-      }
+
       testConfig(twapperlyzerOptions.dataprovider, twapperlyzerOptions.ytkUrl, function(err, list){
         if(err == null){
           userOptions.ytkUrl = twapperlyzerOptions.ytkUrl;
@@ -258,7 +258,7 @@ function loadUserConfig(callback){
             twapperSession.archiveList.push(listEntry);
           })
 
-          $('#listHashtagsButton .ui-btn-text').text("List Hashtag Archives ("+twapperSession.archiveList.length+")");
+          $('#listRemoteArchivesButton .ui-btn-text').text("List archives from YourTwapperkeeper ("+twapperSession.archiveList.length+")");
           $('#ytkURLField').val(userOptions.ytkUrl);
           $('#dataProviderField').val(userOptions.dataprovider);
           callback(null, true);
@@ -274,40 +274,6 @@ function loadUserConfig(callback){
   });
 }
 
-/**
- * Welcome Page:
- *
- */
- 
- /**
- * Get the variables from the chooseArchiveForm and 
- * - check if a ytkURl is present 
- * - find the ID to a given hashtag
- * - create a selectedArchive object
- * 
- * @param {Function} event
- */
-function chooseArchiveFormHandler(event){
-  event.preventDefault();
-  var chooseArchiveFormVars = $('#chooseArchiveForm').serializeArray();
-  if(userOptions == null){
-    noVaildYtrkURL();
-  }else{
-   chooseArchiveFormVars[0].value = validateHashtagField(chooseArchiveFormVars[0].value, twapperSession.archiveList);
-    if(chooseArchiveFormVars[0].value == "error"){
-      popErrorMessage("Can't analyse this archive",500);
-    }else{
-      twapperSession.selectedArchive = createSelectedArchiveObject(chooseArchiveFormVars);
-      
-      if(twapperSession.selectedArchive.isSearch){
-        popErrorMessage("Not implemented at the moment",1500);
-      }else{
-        createArchivePage(twapperSession.selectedArchive.entry.id);
-      }
-    }
-  }
-}
-
  /**
  * check if the user input is a valid archive number 
  * find the id to a hastag.
@@ -316,36 +282,45 @@ function chooseArchiveFormHandler(event){
  * @param {Array} twapperSession.archiveList The list of available archives.
  * @return {Number|String} the id or the string "error" 
  */
-function validateHashtagField(value, archiveList){
+function getArchivesForSearchterm(value, archiveList, localArchivesList){
   if(value == "" ){
-    return "error";
+    return [];
   }
   if(isNaN(value)){
-    return getYTKID(value, archiveList);
+    var res = [];
+    
+    //Remote Archives get Searched 
+    res.push(getArchivesListForSerachtermHelper(value, archiveList));
+    //Local Archives get Searched 
+    res.push(getArchivesListForSerachtermHelper(value, localArchivesList, archiveList[0].id.split("-")[0]));
+    if(res[0].length > 0 || res[1].length > 0 ){
+      return res;
+    }else{
+      return []
+    }
   }
   //console.log(value, archiveList.length)
   if(value > 0 && value <= archiveList.length){
-    return value;
+    return [[value],[]];
   }else{
-    return "error";
+    return [];
   }
 }
 
- /**
- * find the id to a string(hashtag)
- * 
- * @param {String} value The user input
- * @param {Array} archiveList The list of available archives.
- * @return {Number|String} the id or the string "error" 
- */
-function getYTKID(value, archiveList){
-  
+function getArchivesListForSerachtermHelper(value, archiveList, hash){
+  var res = [];
   for (var i=0; i<archiveList.length; i++){
-    if(archiveList[i].keyword.toLowerCase() ==value.toLowerCase()  || archiveList[i].keyword.substring(1, archiveList[i].keyword.length).toLowerCase()  == value.toLowerCase() ){
-      return archiveList[i].id.split("-")[1];
+    if(archiveList[i].id.split("-")[0] != hash){
+      if(archiveList[i].keyword.toLowerCase() == value.toLowerCase()  || archiveList[i].keyword.substring(1, archiveList[i].keyword.length).toLowerCase()  == value.toLowerCase() ){
+        res.push(archiveList[i]);
+      }else{
+        if(archiveList[i].description.toLowerCase().indexOf(value.toLowerCase()) != -1 ){
+          res.push(archiveList[i]);
+        }
+      }
     }
   }
-  return "error";
+  return res;
 }
 
 /**
@@ -392,7 +367,7 @@ function optionsFormHandler(event){
   
   loadUserConfig(function(err,res){
     if(err==null){
-      $.mobile.changePage("#welcomePage",{transition: "slide",reverse: true});
+      $.mobile.changePage("#listArchivesPage",{transition: "slide",reverse: true});
       appendNewURLsToConfig([ytkUrl,dataprovider], [config.YtkUrls,config.dataprovider]);
 
     }else{
@@ -427,23 +402,6 @@ function clearUserConfigHandler(){
 }
 
 
-function localArchivesPageHandler(){
-  mydb.view("twapperlyzer/listArchives", {
-      success: function(data) {
-        twapperSession.localArchiveList =[];
-        
-        _.each(data.rows, function(localArchiveListEntry){
-          twapperSession.localArchiveList.push(localArchiveListEntry.value);
-        });
-
-        generateArchiveList($('#localArchiveList'), twapperSession.localArchiveList, null,"alphabetic" );//local archive id
-      },
-      error: function(status) {
-          popErrorMessage("Clod not load Local Archives Analyses"+status, 3000)
-          $.mobile.changePage("#welcomePage",{transition: "slide",reverse: true});
-      }
-  });
-}
 
 /**
  * List Archives Page:
@@ -451,12 +409,7 @@ function localArchivesPageHandler(){
  */
 
 function sortArchiveList(orderType){
-  var target;
-  if($.mobile.activePage.attr("id").split("-")[0] == "listArchivesPage"){
-    generateArchiveList($('#archivesList'), twapperSession.archiveList, orderType );
-  }else{
-    generateArchiveList($('#localArchiveList'), twapperSession.localArchiveList, orderType );
-  }
+  generateArchiveList($('#archivesList'), twapperSession.archiveList,twapperSession.localArchiveList, orderType );
 }
  /**
  * Empty the #archivesList and fill it with the content of 
@@ -464,36 +417,61 @@ function sortArchiveList(orderType){
  *
  */
 function listArchivesPageHandler(event){
-  generateArchiveList($('#archivesList'), twapperSession.archiveList, "alphabetic" );//your twapperkeeper archive id
+  generateArchiveList($('#archivesList'), twapperSession.archiveList,twapperSession.localArchiveList, "-" );//your twapperkeeper archive id
 }
 
-function generateArchiveList(parent, data, orderType){
+
+
+
+function generateArchiveList(parent, archiveList,localArchiveList, orderType){
   parent.empty();
-  var template = twapperSession.templates.archiveListElements;
 
   if(parent.attr("orderType") == orderType){
-    data.reverse();
+    archiveList.reverse();
+    localArchiveList.reverse();
   }else{
     switch(orderType){
       case "alphabetic" :
-        data.sort(compareKeywords);
+        archiveList.sort(compareKeywords);
+        localArchiveList.sort(compareKeywords);
         parent.attr("orderType", orderType);
       break;
       case "size" :
-        data.sort(compareSize);
+        archiveList.sort(compareSize);
+        localArchiveList.sort(compareSize);
         parent.attr("orderType", orderType);
       break;
       case "chronologic" :
-        data.sort(compareChronologic);
+        archiveList.sort(compareChronologic);
+        localArchiveList.sort(compareChronologic);
         parent.attr("orderType", orderType);
       break;
+      
+      default:
+        archiveList.sort(compareKeywords);
+        localArchiveList.sort(compareChronologic);
+        parent.attr("orderType", "alphabetic");
     }
   }
 
-
   var archiveListData = {};
-  archiveListData.entry = data;
-  parent.append(template(archiveListData));
+  if(archiveList.length > 0 ){
+
+    archiveListData.entry = archiveList;
+    var remoteDivider = '<li data-role="list-divider">Archives from YourTwapperkeeper</li> ';
+     parent.append(remoteDivider);
+    parent.append(twapperSession.templates.archiveListElements(archiveListData));
+    var hash = archiveList[0].id.split("-")[0]
+    localArchiveList = _.reject(localArchiveList, function(archive){
+      return archive.id.split("-")[0] == hash;
+    }); 
+  }
+  if(localArchiveList.length >0){
+  var localDivider = '<li data-role="list-divider">Already analysed archives</li> ';
+    parent.append(localDivider);
+    archiveListData.entry = localArchiveList;
+    parent.append(twapperSession.templates.archiveListElements(archiveListData));
+  }
   parent.listview('refresh');
   
   function compareKeywords(a, b) {
@@ -786,20 +764,26 @@ function archiveWidgetsListHandler(event){
       
       case "#archiveMentionsPage" :
         if($(target).length == 0){
-          Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+          Handlebars.registerPartial('content', twapperSession.templates.blockListContent);
           Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
           var mentionsPage = {
           "pageId":"archiveMentionsPage-"+laid, 
           "pageHeader":"Mentions in Archive", 
-          "containerId":"archiveMentionsContainer-"+laid,
+          "blockId":"archiveMentionsContainer-"+laid,
           "style":"margin: 0px auto; width: 320px; height: 400px; border: none;", 
+          "listHeader":"Total Mentions in this Archive: "+twapperSession.archives[laid].mentions.length,
+          "listId": "mentionsListId-"+laid,
           "footerText":""
           };
           $.mobile.pageContainer.append(twapperSession.templates.page(mentionsPage));
-          $(target).page();
+          
           
           $("#archiveMentionsContainer-"+laid).jQCloud(_.first(twapperSession.archives[laid].mentions, userOptions.showLimit));
           
+            var mentionsListData = {};
+            mentionsListData.entry = twapperSession.archives[laid].mentions;
+            $("#mentionsListId-"+laid).append(twapperSession.templates.simpleList(mentionsListData));
+            $(target).page();
           $.mobile.changePage(target);
         }else{
           $.mobile.changePage(target);
@@ -807,42 +791,98 @@ function archiveWidgetsListHandler(event){
       break;
       case "#archiveHashtagsPage" :
         if($(target).length == 0){
-          Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+          Handlebars.registerPartial('content', twapperSession.templates.blockListContent);
           Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
           var hashtagsPage = {
           "pageId":"archiveHashtagsPage-"+laid, 
           "pageHeader":"Hastags in the Archive", 
-          "containerId":"archiveHashtagsContainer-"+laid,
+          "blockId":"archiveHashtagsContainer-"+laid,
           "style":"margin: 0px auto; width: 320px; height: 400px; border: none;", 
+          "listHeader":"Total Hashtags in this Archive: "+twapperSession.archives[laid].hashtags.length,
+          "listId": "hashtagListId-"+laid,
           "footerText":""
           };
           $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
-          $(target).page();
+
           $("#archiveHashtagsContainer-"+laid).jQCloud(_.first(twapperSession.archives[laid].hashtags, userOptions.showLimit));
+          var hashtagListData = {};
+          hashtagListData.entry = twapperSession.archives[laid].hashtags;
+          $("#hashtagListId-"+laid).append(twapperSession.templates.simpleList(hashtagListData));
+          $(target).page();
+            
           $.mobile.changePage(target);
         }else{
           $.mobile.changePage(target);
         }
       break;
       case "#archiveLinksPage" :
-        Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
-        Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
-        var linksPage = {
-        "pageId":"archiveLinksPage-"+laid, 
-        "pageHeader":"Links in the Archive", 
-        "containerId":"archiveLinksContainer-"+laid,
-        "style":"width: 98%; height: 80%; margin: 0  auto",
-        "footerText":""
-        };
-        $.mobile.pageContainer.append(twapperSession.templates.page(linksPage));
-        $(target).page();
-        addUrlChart("archiveLinksContainer-"+laid, twapperSession.archives[laid].urls, userOptions.showLimit);
-        $.mobile.changePage(target);
+        if($(target).length == 0){
+          Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+          Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+          var linksPage = {
+          "pageId":"archiveLinksPage-"+laid, 
+          "pageHeader":"Links in the Archive", 
+          "containerId":"archiveLinksContainer-"+laid,
+          "style":"width: 98%; height: 80%; margin: 0  auto",
+          "footerText":""
+          };
+          $.mobile.pageContainer.append(twapperSession.templates.page(linksPage));
+          $(target).page();
+          addUrlChart("archiveLinksContainer-"+laid, twapperSession.archives[laid].urls, userOptions.showLimit);
+          $.mobile.changePage(target);
+        }else{
+          $.mobile.changePage(target);
+        }
       break;
+      case "#archiveMembersPage" :
+        if($(target).length == 0){
+          Handlebars.registerPartial('content', twapperSession.templates.listContent);
+          Handlebars.registerPartial('footer', twapperSession.templates.navbarMemberFooter);
+          var membersPage = {
+          "pageId":"archiveMembersPage-"+laid, 
+          "pageHeader":"Members", 
+          "listId":"archiveMembersContainer-"+laid,
+          "style":""
+          };
+          $.mobile.pageContainer.append(twapperSession.templates.page(membersPage));
+          $(target).page();
+
+          $.mobile.changePage(target);
+        }else{
+          $.mobile.changePage(target);
+        }
+      break;
+      
     }
 }
 
+function getRTInfo(){
+  var laid = getLaidFromPageName();
+  var container = $("#archiveMembersContainer-"+laid);
+  var currentArchive = twapperSession.archives[laid];
+  
+  var first10p = Math.floor((10*(currentArchive.rtUser.length/100)));
 
+  container.empty();
+  var listData = {};
+  listData.entry = _.first(currentArchive.rtUser, first10p);
+  container.append(twapperSession.templates.simpleList(listData));
+  container.listview('refresh');
+}
+
+function getQuestionerInfo(){
+  var laid = getLaidFromPageName();
+  var container = $("#archiveMembersContainer-"+laid);
+  var currentArchive = twapperSession.archives[laid];
+  
+  var first10p = Math.floor((10*(currentArchive.questioner.length/100)));
+
+  container.empty();
+  var listData = {};
+  listData.entry = _.first(currentArchive.questioner, first10p);
+  container.append(twapperSession.templates.simpleList(listData));
+  container.listview('refresh');
+}
 /**
  * Show Messages Page:
  *

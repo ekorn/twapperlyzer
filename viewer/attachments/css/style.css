@@ -1,78 +1,4 @@
-﻿/**
- * HTML5 ✰ Boilerplate
- *
- * style.css contains a reset, font normalization and some base styles.
- *
- * Credit is left where credit is due.
- * Much inspiration was taken from these projects:
- * - yui.yahooapis.com/2.8.1/build/base/base.css
- * - camendesign.com/design/
- * - praegnanz.de/weblog/htmlcssjs-kickstart
- */
-
-
-/**
- * html5doctor.com Reset Stylesheet (Eric Meyer's Reset Reloaded + HTML5 baseline)
- * v1.6.1 2010-09-17 | Authors: Eric Meyer & Richard Clark
- * html5doctor.com/html-5-reset-stylesheet/
- */
-
-html, body, div, span, object, iframe,
-h1, h2, h3, h4, h5, h6, p, blockquote, pre,
-abbr, address, cite, code, del, dfn, em, img, ins, kbd, q, samp,
-small, strong, sub, sup, var, b, i, dl, dt, dd, ol, ul, li,
-fieldset, form, label, legend,
-table, caption, tbody, tfoot, thead, tr, th, td,
-article, aside, canvas, details, figcaption, figure,
-footer, header, hgroup, menu, nav, section, summary,
-time, mark, audio, video {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  font-size: 100%;
-  font: inherit;
-  vertical-align: baseline;
-}
-
-article, aside, details, figcaption, figure,
-footer, header, hgroup, menu, nav, section {
-  display: block;
-}
-
-blockquote, q { quotes: none; }
-
-blockquote:before, blockquote:after,
-q:before, q:after { content: ""; content: none; }
-
-ins { background-color: #ff9; color: #000; text-decoration: none; }
-
-mark { background-color: #ff9; color: #000; font-style: italic; font-weight: bold; }
-
-del { text-decoration: line-through; }
-
-abbr[title], dfn[title] { border-bottom: 1px dotted; cursor: help; }
-
-table { border-collapse: collapse; border-spacing: 0; }
-
-hr { display: block; height: 1px; border: 0; border-top: 1px solid #ccc; margin: 1em 0; padding: 0; }
-
-input, select { vertical-align: middle; }
-
-
-
-/**
- * Font normalization inspired by YUI Library's fonts.css: developer.yahoo.com/yui/
- */
-
-
-body { font:13px/1.231 sans-serif; *font-size:small; } /* Hack retained to preserve specificity */
-select, input, textarea, button { font:99% sans-serif; }
-
-/* Normalize monospace sizing:
-   en.wikipedia.org/wiki/MediaWiki_talk:Common.css/Archive_11#Teletype_style_fix_for_Chrome */
-pre, code, kbd, samp { font-family: monospace, sans-serif; }
-
-
+﻿
 /**
  * Minimal base styles.
  */
@@ -220,24 +146,56 @@ textarea.contenteditable {-webkit-appearance: none;}
   padding-right: 5px;
 }
 
-
-/*
- * Media queries for responsive design https://github.com/shichuan/mobile-html5-boilerplate/wiki/The-Style
- */
-
-
-/* Styles for desktop and large screen ----------- */
-
-/*styles for 800px and up!*/
-@media only screen and (min-width: 800px) {
-  /* Styles */
-}/*/mediaquery*/
-
-
-/* iPhone 4, Opera Mobile 11 and other high pixel ratio devices ----------- */
-@media
-only screen and (-webkit-min-device-pixel-ratio: 1.5),
-only screen and (-o-min-device-pixel-ratio: 3/2),
-only screen and (min-device-pixel-ratio: 1.5) {
-  /* Styles */
+.center-wrapper{
+text-align: center;
 }
+.center-wrapper * {
+margin: 0 auto;
+}
+
+.nav-archive-list .ui-btn .ui-btn-inner { 
+  padding-top: 40px !important; 
+}
+
+.nav-archive-list .ui-btn .ui-icon {
+    width: 30px !important;
+    height: 30px !important;
+    margin-left: -15px !important; 
+    box-shadow: none !important;
+    -moz-box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    -webkit-border-radius: 0 !important;
+    border-radius: 0 !important; 
+}
+
+#alphabeticButton .ui-icon {
+    background-attachment: scroll;
+    background-clip: border-box;
+    background-color: transparent;
+    background-image: url("images/icon-sort-az.png");
+    background-origin: padding-box;
+    background-position: 50% 50%;
+    background-repeat: no-repeat;
+    background-size: 30px 30px;
+}
+#sizeButton .ui-icon {
+    background-attachment: scroll;
+    background-clip: border-box;
+    background-color: transparent;
+    background-image: url("images/icon_court.png");
+    background-origin: padding-box;
+    background-position: 50% 50%;
+    background-repeat: no-repeat;
+    background-size: 30px 30px;
+}
+#chronologicButton .ui-icon {
+    background-attachment: scroll;
+    background-clip: border-box;
+    background-color: transparent;
+    background-image: url("images/icon_time.png");
+    background-origin: padding-box;
+    background-position: 50% 50%;
+    background-repeat: no-repeat;
+    background-size: 30px 30px;
+}
+

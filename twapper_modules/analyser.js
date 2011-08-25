@@ -23,6 +23,8 @@ function analyseMesseges(archiveInfo, callback){
   
   var usernames = new Array();
   var shortUrls = new Array();
+  archiveInfo.rtUser = new Array();
+  archiveInfo.questioner = new Array();
   
   for (var i = 0; i < messages.length; i++){
     
@@ -36,7 +38,15 @@ function analyseMesseges(archiveInfo, callback){
     shortUrls = getDataFromTextToArray(helper.regExUrls, messages[i].text, shortUrls);
     
     usernames = aggrigateData(usernames, new Array(messages[i].from_user));
-
+    
+    
+    if(isReTweet(messages[i].text)){
+      archiveInfo.rtUser =  aggrigateData(archiveInfo.rtUser, new Array(messages[i].from_user));
+    }
+    
+    if(isQustion(messages[i].text)){
+      archiveInfo.questioner =  aggrigateData(archiveInfo.questioner,new Array(messages[i].from_user));
+    }
   }
   
   //Data aggregated
@@ -61,6 +71,9 @@ function analyseMesseges(archiveInfo, callback){
 
   response.messagesSoFar = archiveInfo.messagesSoFar + messages.length;
   response.archive_info = archiveInfo.archive_info;
+  response.rtUser = (_.sortBy(archiveInfo.rtUser, function(entry){return entry.weight})).reverse(); 
+  response.questioner = (_.sortBy(archiveInfo.questioner, function(entry){return entry.weight})).reverse();
+  
   console.log("archiveInfo.archive_info",archiveInfo.archive_info);
   callback(response);  
 
@@ -80,9 +93,9 @@ function analyseMesseges(archiveInfo, callback){
     });
   }
   
-  */
-  archiveInfo.urls = expandUrls(shortUrls, archiveInfo.urls, callback);
 
+  archiveInfo.urls = expandUrls(shortUrls, archiveInfo.urls, callback);
+*/
 }
 
 
@@ -108,13 +121,14 @@ function expandUrls(shortUrls, realUrls, callback){
       handleRealURL({href:shortUrl.text});
     }
     function handleRealURL(realUrl){
+      
       // url is a url object
       urlCount++;
       realUrls = aggrigateData(realUrls, new Array(realUrl.href), shortUrl.weight);
       var currentPercentige = getProgessInPercent(urlCount,shortUrls.length);
       
       if(currentPercentige > lastPercentCount){
-        console.log("got "+urlCount+" of "+shortUrls.length+" ("+currentPercentige+"%) of the URLs");
+        console.log("got "+urlCount+" of "+shortUrls.length+" ("+currentPercentige+"%) of the URLs", realUrl);
         lastPercentCount = currentPercentige;
       }
       if(urlCount == shortUrls.length){
@@ -144,6 +158,23 @@ function getProgessInPercent(percentage,base){
   return Math.floor((percentage/(base/100)));
 }
 
+/**
+ *Test a given Text is a Retweet 
+ */
+function isReTweet(text){
+  console.log(text.substring(0,4), text.substring(0,3).length);
+  return text.substring(0,4) === "RT @"
+  
+}
+
+function isQustion(text){
+  return text.indexOf("?") !== -1
+}
+
+/**
+ *Anlalyse a given Text with the regex and aggregate the 
+ *result in the target. 
+ */
 function getDataFromTextToArray(regEx, text, target){
     var tmpData = text.match(regEx);
 
