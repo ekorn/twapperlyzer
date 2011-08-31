@@ -39,8 +39,9 @@
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="css/jquery.mobile-1.0b2.min.css" type="text/css" media="screen" charset="utf-8" /> 
   <link rel="stylesheet" href="css/style.css?v=1" type="text/css" media="screen" charset="utf-8"> 
-  <link rel="stylesheet" href="css/jquery.mobile.datebox.min.css" type="text/css" media="screen" charset="utf-8" /> 
-	<link rel="stylesheet" href="css/leaflet.css" type="text/css" media="screen" charset="utf-8" />
+  <!-- <link rel="stylesheet" href="css/jquery.mobile.datebox-1.0b1.min.css" type="text/css" media="screen" charset="utf-8" />  -->
+  <link rel="stylesheet" href="css/jquery.mobile.simpledialog.min.css" type="text/css" media="screen" charset="utf-8" />
+  <link rel="stylesheet" href="css/leaflet.css" type="text/css" media="screen" charset="utf-8" />
   <link rel="stylesheet" href="css/jqcloud.css" type="text/css" />
 	<!--[if lte IE 8]><link rel="stylesheet" href="css/leaflet.ie.css" type="text/css" media="screen" charset="utf-8" /><![endif]-->
 	
@@ -49,17 +50,13 @@
 </head>
 
 <body>
-  <div data-role="page" >
+  <div data-role="page">
      <noscript><center><h1>Without Javascript enabled Twapperlyzer will not work.</h1></center></noscript>
   </div>
-  
+
   <!-- JavaScript at the bottom for fast page loading -->
 
 <script type="text/javascript" src="js/libs/jquery-1.6.1.min.js"></script>
-<script type="text/javascript">
-    $( document ).bind( "mobileinit", function(){ $.mobile.page.prototype.options.degradeInputs.date = 'text'; });	
-</script>
-
   <!-- scripts concatenated and minified via ant build script-->
   <script type="text/javascript" src="js/mylibs/handlebars.1.0.0.beta.3.js"></script> 
   <script src="js/mylibs/leaflet-0.2.1.min.js"></script> 
@@ -77,8 +74,10 @@
   <script type="text/javascript" src="js/mylibs/jquery.couch.js"></script> 
   <script type="text/javascript" src="js/mylibs/twapperlyzerApi.js"></script> 
   <script type="text/javascript" src="js/mylibs/jquery.mobile-1.0b2.js"></script> 
-  <script type="text/javascript" src="js/mylibs/jquery.mobile.datebox.min.js"></script>
+
+  <script type="text/javascript" src="js/mylibs/jquery.mobile.simpledialog.min.js"></script>
   <!-- end concatenated and minified scripts-->
+  <!--<script type="text/javascript" src="js/mylibs/jquery.mobile.datebox-1.0b1.min.js"></script>-->
 
   <script>
     // iPhone Scale Bug Fix, read this when using http://www.blog.highub.com/mobile-2/a-fix-for-iphone-viewport-scale-bug/
@@ -99,6 +98,15 @@
     {{> content}}
     {{> footer}}
   </div>
+</script>
+
+<script id="dialogPage" type="text/html">
+<div data-role="page" id = "{{dialogPageId}}" data-url="{{dialogPageId}}>
+  <div data-role="header" data-position="inline">
+    <h1>{{dialogHeader}}</h1>
+  </div>
+{{> content}}
+</div>
 </script>
 
 <!--HEADER -->
@@ -136,6 +144,8 @@
   <ul data-role="listview" data-filter="true" data-inset="true" id="{{listId}}" orderType="" >
   </div>
 </script>
+
+
 
 <script id="optionsContent" type="text/html">
   <div data-role="content">
@@ -252,6 +262,31 @@
   </li>
   {{/each}}
 </script>
+
+<script id="simpleDialog" type="text/html">
+  <div style=' padding:7px;' >
+    <h2>{{dialogHeader}}</h2>
+    {{dialogText}}
+  </div>
+<a data-role="button" data-transition="fade" href="{{target}}">Close</a>
+</script>
+
+<script id="aboutContent" type="text/html">
+<p>This project was created at the <a href="http://ddi.uni-paderborn.de/en" target="_blank" >DDI</a> 
+of the <a href="http://www.uni-paderborn.de/en/" target="_blank" >University of Paderborn</a>. 
+The aim is to anlayse <a href="http://twitter.com" target="_blank" >Twitter</a> messages 
+archived by a instance of <a href="http://code.google.com/p/yourtwapperkeeper/" target="_blank" >YourTwapperkeeper</a>.
+</p>
+<p> It is split into two functional modules the dataprovider and the viewer. </p>
+<ul>
+  <li>The dataprovider downloads the messages from a YourTwapperkeeper 
+  instance and gather additional information from other sources. Afterwards it aggregate 
+  the data and save it into a <a href="http://couchdb.org" target="_blank" >couchDB</a> instance. More information about the dataprovider you find at the <a href="http://{{dataproviderUrl}}" target="_blank" >API documentation</a></li> 
+  <li>The viewer is a <a href="http://couchapp.org" target="_blank" >couchapp</a> that allow you to replicate to your own Couchdb. This enables you to view all analysis that don't require additional data from the Internet</li>
+</ul>  
+<p> For this twapperkeeper instance is <a href="mailto:{{adminEmail}}?subject=twapperlyzer%20request">{{adminName}}</a> responsible. 
+</script>
+
 
 <!--FOOTER -->
 <script id="simpleFooter" type="text/html">

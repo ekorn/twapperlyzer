@@ -1,3 +1,4 @@
-config/default.json
-node_modules/*
-node_modules/.bin/*
+dataprovider/config/default.json
+dataprovider/node_modules/*
+dataprovider/node_modules/.bin/*
+viewer/node_modules/*

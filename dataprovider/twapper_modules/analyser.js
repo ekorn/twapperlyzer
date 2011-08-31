@@ -9,22 +9,106 @@ getNamesToGender('./staticData/forenames2.txt', function(namesFromFile){names = 
 var oauth = require('oauth');
 var OAuth= oauth.OAuth;
 var conf = require('config');
+var glossary = require("glossary")({ minFreq: 2 });
 var helper = require('./helper.js');
 var oAuth= new OAuth("http://twitter.com/oauth/request_token",
                  "http://twitter.com/oauth/access_token", 
                  conf.twitter.consumerKey,  conf.twitter.consumerSecret, 
-                 "1.0A", null, "HMAC-SHA1"); 
+                 "1.0A", null, "HMAC-SHA1");
 
+var currentDate = 0;
+var oneDay = 86400;
+var oneHour = 3600;
+var regExUsernames = /(^|\s)@(\w+)/g;
+var regExHashtags  = /(^|\s)#(\w+)/g;
+  
 function analyseMesseges(archiveInfo, callback){
+  var msgByDate = [];
+  _.each(archiveInfo.tweets.reverse(), function(message){
+    
+    //The division by 100, cut the two trailing zeros, just for saving traffic for the client
+    var date = getNormalizedDate(message.time)//100;
+    msgByDate = aggrigateData(msgByDate, [date]);
+    //The Object for the day
+    var msgForCurrentDate = _.last(msgByDate);
+    msgForCurrentDate.date = new Date (date *1000)
+    //=========================================
+    //Hashtags
+    if(_.isUndefined(msgForCurrentDate.ht)){
+      msgForCurrentDate.ht = []; //ht short for Hashtag, again for saving traffic data 
+    }
+    msgForCurrentDate.ht = getDataFromTextToArray(regExHashtags, message.text, msgForCurrentDate.ht, archiveInfo.archive_info.keyword);
+    //Mentions
+    if(_.isUndefined(msgForCurrentDate.me)){
+      msgForCurrentDate.me = []; //me short for Mentions, again for saving traffic data 
+    }
+    msgForCurrentDate.me = getDataFromTextToArray(regExUsernames, message.text, msgForCurrentDate.me);
+    //User
+    if(_.isUndefined(msgForCurrentDate.un)){
+      msgForCurrentDate.un = []; //un short for Usernames, again for saving traffic data 
+    }
+    msgForCurrentDate.un = aggrigateData(msgForCurrentDate.un, [message.from_user]); 
+    //Questions 
+    if(_.isUndefined(msgForCurrentDate.qu)){
+      msgForCurrentDate.qu = []; //qu short for Question, again for saving traffic data 
+    }
+    if(isQuestion(message.text)){
+      msgForCurrentDate.qu.push({"un":message.from_user, "text": message.text});
+    }
+    //GEO 
+    if(_.isUndefined(msgForCurrentDate.geo)){
+      msgForCurrentDate.geo = []; //geo short for Geo Information, again for saving traffic data 
+    }
+    msgForCurrentDate.geo = getGeoMarkerFromMessage(message, msgForCurrentDate.geo);
+    //ALL TEXT
+    
+    if(_.isUndefined(msgForCurrentDate.alltext)){
+      msgForCurrentDate.alltext = ""; 
+    }
+    if(!isReTweet(message.text)){
+      msgForCurrentDate.alltext+= (message.text);
+    }
+    
+    
+    //ReTweets
+    if(_.isUndefined(msgForCurrentDate.rt)){
+      msgForCurrentDate.rt = 0; 
+    }
+    if(isReTweet(message.text)){
+      msgForCurrentDate.rt++;
+    }
+  });
+  
+  _.each(msgByDate, function(msgForCurrentDate){
+    /*
+    //Deleting unused object reverences, again for saving traffic data  
+    if(msgForCurrentDate.qu.length == 0){
+       delete msgForCurrentDate.qu;
+    }
+    if(msgForCurrentDate.ht.length == 0){
+       delete msgForCurrentDate.ht;
+    }
+    if(msgForCurrentDate.me.length == 0){
+       delete msgForCurrentDate.me;
+    }
+    */
+    msgForCurrentDate.keywords = glossary.extract(msgForCurrentDate.alltext);
+  });
+  
+  
+  callback((_.sortBy(msgByDate, function(entry){return entry.weight})).reverse());
+  //callback(msgByDate);
+}
+
+function analyseMessegesOLD(archiveInfo, callback){
 
   var messages = archiveInfo.tweets;
-  var regExUsernames = /(^|\s)@(\w+)/g;
-  var regExHashtags  = /(^|\s)#(\w+)/g;
+
   
-  var usernames = new Array();
-  var shortUrls = new Array();
-  archiveInfo.rtUser = new Array();
-  archiveInfo.questioner = new Array();
+  var usernames = [];
+  var shortUrls = [];
+  archiveInfo.rtUser = [];
+  archiveInfo.questioner = [];
   
   for (var i = 0; i < messages.length; i++){
     
@@ -44,14 +128,15 @@ function analyseMesseges(archiveInfo, callback){
       archiveInfo.rtUser =  aggrigateData(archiveInfo.rtUser, new Array(messages[i].from_user));
     }
     
-    if(isQustion(messages[i].text)){
+    if(isQuestion(messages[i].text)){
       archiveInfo.questioner =  aggrigateData(archiveInfo.questioner,new Array(messages[i].from_user));
     }
+    
   }
   
   //Data aggregated
   //Synchronous callbacks
-  var response = new Object();
+  var response = {};
   response.geoMarker = archiveInfo.geoMarker;
 
   archiveInfo.hashtags = _.reject(archiveInfo.hashtags, function(hashtag){
@@ -73,8 +158,7 @@ function analyseMesseges(archiveInfo, callback){
   response.archive_info = archiveInfo.archive_info;
   response.rtUser = (_.sortBy(archiveInfo.rtUser, function(entry){return entry.weight})).reverse(); 
   response.questioner = (_.sortBy(archiveInfo.questioner, function(entry){return entry.weight})).reverse();
-  
-  console.log("archiveInfo.archive_info",archiveInfo.archive_info);
+   
   callback(response);  
 
   //A-Synchronous Callbacks
@@ -86,7 +170,7 @@ function analyseMesseges(archiveInfo, callback){
       
       if(usernames.length == archiveInfo.users.length){
         archiveInfo.users = (_.sortBy(archiveInfo.users, function(userinfo){return userinfo.amountOfTweetsInArichve})).reverse();
-        var response = new Object();
+        var response = {};
         response.users = archiveInfo.users;
         callback(response);  
       }
@@ -141,7 +225,7 @@ function expandUrls(shortUrls, realUrls, callback){
     
     function sendResponse(){
       realUrls = (_.sortBy(realUrls, function(url){return url.weight})).reverse();
-      var response = new Object();
+      var response = {};
       response.urls = realUrls;
       callback(response);
     }
@@ -162,26 +246,30 @@ function getProgessInPercent(percentage,base){
  *Test a given Text is a Retweet 
  */
 function isReTweet(text){
-  console.log(text.substring(0,4), text.substring(0,3).length);
   return text.substring(0,4) === "RT @"
   
 }
 
-function isQustion(text){
-  return text.indexOf("?") !== -1
+function isQuestion(text){
+  return !isReTweet(text) && text.indexOf("?") !== -1
 }
 
 /**
  *Anlalyse a given Text with the regex and aggregate the 
  *result in the target. 
  */
-function getDataFromTextToArray(regEx, text, target){
-    var tmpData = text.match(regEx);
+function getDataFromTextToArray(regEx, text, target, reject){
+  var tmpData = text.match(regEx);
 
-    if(tmpData != null){
-      return aggrigateData(target, tmpData);
-    }
-    return target;
+  if(tmpData != null && reject != null){
+    var tmpData = _.reject(tmpData, function(data){
+      return (_.strip(data.toLowerCase()) === reject.toLowerCase() ); 
+    }); 
+  }
+  if(tmpData != null){
+    return aggrigateData(target, tmpData);
+  }
+  return target;
 }
 /**
  * Aggigate Array with String to a Array where each string is unique
@@ -195,11 +283,11 @@ function getDataFromTextToArray(regEx, text, target){
 function aggrigateData(dataSoFar, newData, multiply){
   for (var i = 0; i < newData.length; i++){
     entry = _.detect(dataSoFar, function(entity){
-     return (entity.text ==  _.strip(newData[i]));
+     return (entity.text.toLowerCase() ==  _.strip(newData[i]).toLowerCase());
     });
     
     if(_.isUndefined(entry)){
-      var entry = new Object();
+      var entry = {};
       entry.text = _.strip(newData[i]);
       if(!_.isUndefined(multiply)){
         entry.weight = multiply;
@@ -234,19 +322,19 @@ function getGeoMarkerFromMessage(message, geoMarkerSoFar){
       });
     if(_.isUndefined(wasSeen)){
       //Setting uo a new marker with a position
-      var geoMarkerInfo = new Object();
+      var geoMarkerInfo = {};
       geoMarkerInfo.lat = message.geo_coordinates_0;
       geoMarkerInfo.long = message.geo_coordinates_1;
       
       //a user with name
-      var user = new Object();
+      var user = {};
       user.name = message.from_user;
               
       //and the tweetID + time
-      user.tweets = new Array();
-      var newTweet = new Object();
+      user.tweets = [];
+      var newTweet = {};
       newTweet.id = message.id;
-      newTweet.time = message.time;
+      //newTweet.time = message.time; //No need for time in new version
       user.tweets.push(newTweet);
       
       //adding the user to marker
@@ -260,22 +348,22 @@ function getGeoMarkerFromMessage(message, geoMarkerSoFar){
       });
       if(_.isUndefined(user)){
         //A new User
-        user = new Object();
+        user = {};
         user.name = message.from_user;
         
         //Set up his tweet Array
-        user.tweets = new Array();
-        var newTweet = new Object();
+        user.tweets = [];
+        var newTweet = {};
         newTweet.id = message.id;
-        newTweet.time = message.time;
+        //newTweet.time = message.time;//No need for time in new version
         user.tweets.push(newTweet);
         
         wasSeen.users.push(user);
       }else{
         //Just add the new tweet to the existing Array
-        var newTweet = new Object();
+        var newTweet = {};
         newTweet.id = message.id;
-        newTweet.time = message.time;
+        //newTweet.time = message.time;//No need for time in new version
         user.tweets.push(newTweet);
       }
     }
@@ -291,7 +379,7 @@ function getUserInfo(user, callback){
       console.log("could not fetch Userdata for "+user.text, error);
     }else{
         var userdata = JSON.parse(userdata);
-        var userinfo = new Object();
+        var userinfo = {};
 
         //General Info
         userinfo.name = userdata.name;
@@ -357,7 +445,7 @@ function clear(oldVar){
   var newVar;
   if(_.isArray(oldVar)){
     newVar = oldVar;
-    oldVar = new Array();
+    oldVar = [];
     return newVar;
   }else{
     newVar = oldVar;
@@ -390,6 +478,22 @@ function getNamesToGender(fileName, callback){
   });
 }
 
+
+function getNormalizedDate(epoch){
+  if(epoch > currentDate + oneHour){
+    currentDate = epochYMD(epoch);
+  }
+  return currentDate;
+}
+
+function epochYMD(epoch){
+  var date = new Date(epoch * 1000)
+  //date.setUTCHours(0);
+  date.setMinutes(0);
+  date.setSeconds(0);
+  date.setMilliseconds(0);
+  return date.getTime()/1000;
+}
 //Module exports
 exports.analyseMesseges = analyseMesseges;
 exports.getUserInfo = getUserInfo;

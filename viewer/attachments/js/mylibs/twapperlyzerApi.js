@@ -1,27 +1,31 @@
+(function( twapperlyzerApi, $, undefined ) {
 
-function testAPI(dataprovider, callback){
+errorDataproviderUrl = "Dataprovider URL is not valid";
+errorYtkUrl = "ytk Url is not valid";
+
+twapperlyzerApi.testAPI = function (dataprovider, callback){
   
-var jsonpTestAPI = $.ajax({
-    url : 'http://'+dataprovider+'/testAPI?callback=?',
-    dataType : "jsonp",
-    timeout : 1000
-});
+  var jsonpTestAPI = $.ajax({
+      url : 'http://'+dataprovider+'/testAPI?callback=?',
+      dataType : "jsonp",
+      timeout : 1000
+  });
 
-jsonpTestAPI.success(function(data) {
-      if(data.status == "ok"){
-        callback(null,data);
-      }else{
-        callback("Dataprovider URL is not valid", null);
-      }
-});
+  jsonpTestAPI.success(function(data) {
+        if(data.status == "ok"){
+          callback(null,data);
+        }else{
+          callback(errorDataproviderUrl, null);
+        }
+  });
 
-jsonpTestAPI.error(function() {
-  callback("Dataprovider URL is not valid", null);
-});
+  jsonpTestAPI.error(function() {
+    callback(errorDataproviderUrl, null);
+  });
 
 }
 
-function getArchiveList(ytkUrl, dataprovider, callback){
+twapperlyzerApi.getArchiveList = function (ytkUrl, dataprovider, callback){
   
   var jsonpGetArchiveList = $.ajax({
     dataType: 'jsonp',
@@ -40,16 +44,16 @@ function getArchiveList(ytkUrl, dataprovider, callback){
   });
   
   jsonpGetArchiveList.error(function() {
-    callback("ytk URL URL is not valid", null);
+    callback(errorYtkUrl, null);
   });
 }
 
-function testConfig(dataprovider, ytkUrl, callback){
-  testAPI(dataprovider, function(err, result){
+twapperlyzerApi.testConfig = function (dataprovider, ytkUrl, callback){
+  twapperlyzerApi.testAPI(dataprovider, function(err, result){
     if(err != null){
       callback(err,null)
     }else{
-      getArchiveList(ytkUrl, dataprovider, function(err, result){
+      twapperlyzerApi.getArchiveList(ytkUrl, dataprovider, function(err, result){
         if(err != null){
           callback(err,null);
         }else{
@@ -60,13 +64,13 @@ function testConfig(dataprovider, ytkUrl, callback){
   });
 }
 
-function analyseArchive (selectedArchive,dbconfig,dataprovider, callback){
+twapperlyzerApi.analyseArchive = function (selectedArchive,dbconfig,dataprovider, callback){
   twapperlizerCall(selectedArchive,dbconfig,dataprovider,"analyseArchive", callback);
 }
-function updateArchive (selectedArchive,dbconfig,dataprovider, callback){
+twapperlyzerApi.updateArchive = function (selectedArchive,dbconfig,dataprovider, callback){
   twapperlizerCall(selectedArchive,dbconfig,dataprovider,"updateArchive", callback);
 }
-function createOrUpdateArchive(selectedArchive,dbconfig,dataprovider, callback){
+twapperlyzerApi.createOrUpdateArchive = function (selectedArchive,dbconfig,dataprovider, callback){
   twapperlizerCall(selectedArchive,dbconfig,dataprovider,"createOrUpdateArchive", callback);
 }
 
@@ -87,7 +91,7 @@ function twapperlizerCall(selectedArchive,dbconfig,dataprovider,apiFunction, cal
 }
 
 
-function getMsgs(lastID,limit, ytkUrl, id,dataprovider, callback){
+twapperlyzerApi.getMsgs = function (lastID,limit, ytkUrl, id,dataprovider, callback){
   $.ajax({
     dataType: 'jsonp',
     data: "ytkUrl="+ytkUrl+"&l="+limit+"&id="+id+"&lastID="+lastID,
@@ -114,3 +118,6 @@ function serializeToURLEncoding (obj, prefix) {
   }
   return str.join("&");
 }
+
+}( window.twapperlyzerApi = window.twapperlyzerApi || {}, jQuery ));
+

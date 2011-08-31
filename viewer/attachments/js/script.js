@@ -3,11 +3,13 @@ var map;
 var chart;
 var userOptions = {};
 var config;
+var messages = {};
 var mydb;
 var twapperSession = new Object(); //The temporary variable where all the session data is stored
 twapperSession.archiveList = [];
 twapperSession.archives = [];
 twapperSession.localArchiveList =[];
+messages.configNotFound = "config not found";
 
   
 $(window).load(function(){ 
@@ -25,18 +27,20 @@ $.couch.db("dbname").info({
     success: function(data) {
         mydb = $.couch.db("dbname");
         dbReady(data);
+        
     },
     error: function(data){
       $.couch.db(directUrl).info({
         success: function(data) {
             mydb = $.couch.db(directUrl);
             dbReady(data);
+
         }
       });
     }
 });
 createPages();
-  
+
 /**
  * Event binding for the JQM Pages
  *
@@ -45,7 +49,7 @@ createPages();
   // Options Page
   $('#optionsPage').live('pagebeforeshow',optionsPageHandler);
   $('#optionsForm :submit' ).click(optionsFormHandler); 
-  //copy the chosen select to the text input
+  //copy the chosen value from the selectbox to the text input
   $("#ytkURLSelect").change(function(){
     $("#ytkURLField").val($(this).val());
   });
@@ -61,19 +65,13 @@ createPages();
   
   $("#debugButton").click(function(){
     console.log("Useless");
-    setUpChangesFeed();
-//END
+    //END
   });
     
-  // Show Msg Page
- 
-
-
 //UNSORTED
       $(document).bind("scrollstop", loadMsgAtPageEnd);
 
 //===============END OF DOC READY===============
-
 
 });});
 
@@ -83,26 +81,98 @@ createPages();
  *
  */
 
+function createDialog(html){
+  $(this).simpledialog({
+        'mode' : 'blank',
+        'prompt': false,
+        'forceInput': false,
+        'fullHTML' : twapperSession.templates.simpleDialog(html),
+    });
+}
+
 function dbReady(info){
   
   //Loading the different configs
   mydb.openDoc("config",  
     {success: 
       function(configFromDb) {
+        
         config = configFromDb;
-      //if(typeof $_GET.ytkUrl != 'undefined')
+        //Create the about page
+        Handlebars.registerPartial('header', twapperSession.templates.normalHeader);
+        Handlebars.registerPartial('content', $("#aboutContent").html());
+        Handlebars.registerPartial('footer',   twapperSession.templates.simpleFooter);
+        
+        var aboutPage = {
+          "pageId":"aboutPage", 
+          "pageHeader":"About twapperlyzer",
+          "dataproviderUrl": configFromDb.dataprovider[0],
+          "adminEmail": configFromDb.adminEmail,
+          "adminName": configFromDb.adminName,
+          "footerText": ""
+          };
+          
+        $.mobile.pageContainer.append(twapperSession.templates.page(aboutPage));
+        $('#aboutPage').page();
+  
+      //=====
       loadUserConfig(function(err, result){
         $.mobile.hidePageLoadingMsg();
         
+        //ERROR
         if(err != null){
-          popErrorMessage("could not load user config: "+err+". Check you Options",3500);
-          //$.mobile.changePage("#optionsPage");
-          if(_.isUndefined($_GET.laid)){
-            $.mobile.changePage('#listArchivesPage',{ transition: "fade"} );
+          //IT's likly that this is the first visit
+          if (err == messages.configNotFound){
+
+            //Set up the default conf
+            var twapperlyzerStore = new Lawnchair('twapperlyzerStore', function(){});
+            twapperlyzerStore.save(new twapperlyzerClientOnlineOptions(configFromDb.ytkUrls[0], configFromDb.dataprovider[0]));
+            twapperlyzerStore.save(new twapperlyzerClientOfflineOptions());
+
+            //Try if it is working
+            loadUserConfig(function(err,res){
+              //Fine it is working 
+              if(err==null){
+                var simpleDialog = {
+                  "dialogHeader":"No Config found", 
+                  "dialogText":"Since twapperlyzer could not find a configuration, it will set up the default one. You can change the default settings by clicking options in the upper right corner.",
+                  "target": ""
+                };
+                //Lets inform the user about the default conf and route him to his target
+                if(_.isUndefined($_GET.laid)){
+                  simpleDialog.target = "#listArchivesPage";
+                  createDialog(simpleDialog);
+                }else{
+                  createArchivePage($_GET.laid, function(page){
+                    simpleDialog.target = page;
+                    createDialog(simpleDialog);
+                  });
+                }
+              }else{//Default Conf does not work this should never happen 
+                var simpleDialog = {
+                  "dialogHeader":"Default config invaild", 
+                  "dialogText":"The default settings don't work, you might contact the twapperlyzer admin: "+err,
+                  "target": "#aboutPage"
+                };
+                twapperlyzerStore.nuke();
+                createDialog(simpleDialog);
+              }
+            });
+  
+
+          }else{//Some minor Error, just let the user now where he can change his settings and route him to his target
+            popErrorMessage("Error while loading user config: "+err+". Check you Options",3500);
+            if(_.isUndefined($_GET.laid)){
+              $.mobile.changePage('#listArchivesPage',{ transition: "fade"} );
+            }else{ //Move to the requited laid
+              createArchivePage($_GET.laid, function(page){$.mobile.changePage(page,{ transition: "fade"} );});
+            }
           }
-        }else{
+        }else{//All fine just route him to his target
           if(_.isUndefined($_GET.laid)){
             $.mobile.changePage('#listArchivesPage',{ transition: "fade"} );
+          }else{ //Move to the requited laid
+            createArchivePage($_GET.laid, function(page){$.mobile.changePage(page,{ transition: "fade"} );});
           }
         }
       });
@@ -111,7 +181,6 @@ function dbReady(info){
   ); 
   
   //Load the archive List from the DB
-  
   mydb.view("twapperlyzer/listArchives", {
       success: function(data) {
         _.each(data.rows, function(localArchiveListEntry){
@@ -123,18 +192,14 @@ function dbReady(info){
       }
   });
   
-  //Move to the requited laid
-  if(!_.isUndefined($_GET.laid)){
-    createArchivePage($_GET.laid);
-  }
-  
   //The very last thing to do is load the changes feed so webkit can be sure that the site is already fully loaded
-  setTimeout(setUpChangesFeed, 1000);
+  setTimeout(setUpChangesFeed, 4000);
 }
 
 function setUpChangesFeed(){
   mydb.changes().onChange(function(changes) {
     _.each(changes.results, function(change){
+      //Watch for config changes, somebody could add another datasource or ytkUrl
       if(change.id == "config"){
         mydb.openDoc("config",  
           {success: 
@@ -145,6 +210,7 @@ function setUpChangesFeed(){
           }
         ); 
       }
+      //check if the archive is visited by the user in this Session and update the data
       var archiveIdThatChanged = _.detect(_.keys(twapperSession.archives) , function(archiveId){
           return change.id == archiveId;
         });
@@ -166,7 +232,7 @@ function setUpChangesFeed(){
 
 
 function createPages(){
-  
+
   //Helper Functions
   Handlebars.registerHelper("formatEpochTime", function(time){
     return new Date(time*1000);//It is in Epoch time, so sec not milisec
@@ -177,6 +243,8 @@ function createPages(){
   //Compile Templates
   twapperSession.templates = {};
   twapperSession.templates.page = Handlebars.compile( $("#page").html() );
+  twapperSession.templates.simpleDialog = Handlebars.compile( $("#simpleDialog").html() );
+  
   twapperSession.templates.normalHeader = Handlebars.compile( $("#normalHeader").html() );
   twapperSession.templates.msgEntryTemplate = Handlebars.compile( $("#msgEntryTemplate").html() );
   twapperSession.templates.simpleContent = Handlebars.compile( $("#simpleContent").html() );
@@ -206,7 +274,7 @@ function createPages(){
   var optionsPage = {
     "pageId":"optionsPage", 
     "pageHeader":"Options",
-    "target": "#about",
+    "target": "#aboutPage",
     "footerButtonText":"About twapperlyzer"};
     
   $.mobile.pageContainer.append(twapperSession.templates.page(optionsPage));
@@ -228,7 +296,7 @@ function createPages(){
   $.mobile.pageContainer.append(twapperSession.templates.page(archivesPage));
   $('#listArchivesPage').page();
   
-  
+
 }
 
 /**
@@ -246,7 +314,7 @@ function loadUserConfig(callback){
   twapperlyzerStore.get('twapperlyzerOnlineOptions', function(twapperlyzerOptions) {
     if(twapperlyzerOptions != null){
 
-      testConfig(twapperlyzerOptions.dataprovider, twapperlyzerOptions.ytkUrl, function(err, list){
+      twapperlyzerApi.testConfig(twapperlyzerOptions.dataprovider, twapperlyzerOptions.ytkUrl, function(err, list){
         if(err == null){
           userOptions.ytkUrl = twapperlyzerOptions.ytkUrl;
           userOptions.dataprovider = twapperlyzerOptions.dataprovider;
@@ -266,10 +334,7 @@ function loadUserConfig(callback){
         else callback(err, null);
       });
     }else{
-      callback("no config found", null);
-      if(_.isUndefined($_GET.laid)){
-        $.mobile.changePage('#optionsPage',{ transition: "fade"} );
-      }
+      callback(messages.configNotFound, null);
     }
   });
 }
@@ -328,10 +393,10 @@ function getArchivesListForSerachtermHelper(value, archiveList, hash){
  *
  */
 function optionsPageHandler(){
-  fillSelect($('#ytkURLSelect'), config.YtkUrls);
+  fillSelect($('#ytkURLSelect'), config.ytkUrls);
   fillSelect($('#dataProviderSelect'), config.dataprovider);
   if($('#ytkURLField').val() == ""){
-     $('#ytkURLField').val(config.YtkUrls[0]);
+     $('#ytkURLField').val(config.ytkUrls[0]);
   }
   if($('#dataProviderField').val() == ""){
      $('#dataProviderField').val(config.dataprovider[0]);
@@ -368,7 +433,7 @@ function optionsFormHandler(event){
   loadUserConfig(function(err,res){
     if(err==null){
       $.mobile.changePage("#listArchivesPage",{transition: "slide",reverse: true});
-      appendNewURLsToConfig([ytkUrl,dataprovider], [config.YtkUrls,config.dataprovider]);
+      appendNewURLsToConfig([ytkUrl,dataprovider], [config.ytkUrls,config.dataprovider]);
 
     }else{
       twapperlyzerStore.nuke();
@@ -516,24 +581,24 @@ function selectedArchiveByList(event) {
   event.preventDefault();
   event.stopPropagation();
   
-  createArchivePage($(this).attr("href").split("#page-")[1]);
+  createArchivePage($(this).attr("href").split("#page-")[1], function(page){$.mobile.changePage(page);});
 }
 
-function createArchivePage(requestedLaid){
+function createArchivePage(requestedLaid, callback){
 
   var hashId = requestedLaid.split("-");
   twapperSession.laid = requestedLaid;
   if(twapperSession.lastLaid != twapperSession.laid){
     mydb.openDoc( requestedLaid,  
       {success: function(data) {
-          setData(data);
+          setData(data, callback);
           if (twapperSession.ytkUrlHash != null){
             var listEntry = _.detect(twapperSession.archiveList, function(le){return le.id == requestedLaid});
             if(twapperSession.ytkUrlHash == hashId[0] && !_.isUndefined(listEntry)){
               if(data.messagesSoFar != listEntry.count){
                 console.log("");
                 var url = "docID="+requestedLaid+"&l="+listEntry.count;
-                updateArchive(url,config.thisdb, userOptions.dataprovider, function(err, result){
+                twapperlyzerApi.updateArchive(url,config.thisdb, userOptions.dataprovider, function(err, result){
                   if(err!=null){
                     popErrorMessage("Could not update this archive: "+err.msg, 2000);
                   }else{
@@ -555,15 +620,15 @@ function createArchivePage(requestedLaid){
         l.name = "l";
         twapperSession.selectedArchive = createSelectedArchiveObject([id,l]);
         $.mobile.showPageLoadingMsg();
-        getArchiveFromDataprovider(twapperSession.selectedArchive.url,config.thisdb, userOptions.dataprovider,function(data){
-          setData(data);
+        twapperlyzerApi.getArchiveFromDataprovider(twapperSession.selectedArchive.url,config.thisdb, userOptions.dataprovider,function(data){
+          setData(data,callback);
           twapperSession.lastLaid = twapperSession.laid;
         });
       }
       }
     );
   }else{
-    $.mobile.changePage("#page-"+twapperSession.laid)
+    callback("#page-"+twapperSession.laid)
   }
 }
 
@@ -576,7 +641,7 @@ function createArchivePage(requestedLaid){
 
  
 function getArchiveFromDataprovider(selectedArchiveUrl,thisdb, dataprovider, callback){
-    createOrUpdateArchive(selectedArchiveUrl, thisdb, dataprovider, function(err, result){
+    twapperlyzerApi.createOrUpdateArchive(selectedArchiveUrl, thisdb, dataprovider, function(err, result){
       if(err!=null){
         popErrorMessage("Could not analyse this archive: "+err.msg, 2000);
       }else{
@@ -590,7 +655,7 @@ function getArchiveFromDataprovider(selectedArchiveUrl,thisdb, dataprovider, cal
 }
 
 
-function setData(data){
+function setData(data,callback){
   if($('#page-'+data._id).length == 0){
     twapperSession.archives[data._id] = data;
     
@@ -629,7 +694,7 @@ function setData(data){
   }
   
   $.mobile.hidePageLoadingMsg();
-  $.mobile.changePage("#page-"+data._id);
+  callback("#page-"+data._id)
 }
 
 /**
@@ -922,7 +987,7 @@ function loadMessagesFromServer(){
     lastID = currentArchive.tweets[currentArchive.tweets.length-1].id;
   }
   if(currentArchive.currentMsg <= currentArchive.messagesSoFar){
-    getMsgs(lastID,userOptions.addMsgVal, userOptions.ytkUrl, currentArchive.archive_info.id,userOptions.dataprovider, function(response){
+    twapperlyzerApi.getMsgs(lastID,userOptions.addMsgVal, userOptions.ytkUrl, currentArchive.archive_info.id,userOptions.dataprovider, function(response){
       if(currentArchive.tweets.length != 0 ){
         response.shift();
       }

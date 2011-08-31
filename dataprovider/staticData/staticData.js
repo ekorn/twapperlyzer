@@ -8596,7 +8596,7 @@ var staticListOfArchives = [[{"id":"1","keyword":"#knowaan","description":"Tweet
 var archiveInfo = { _id: 'c3cb7fdaa8173a770592f39bb0dfd541',
   archive_info: 
    { id: '1',
-     keyword: '#knowaan',
+     keyword: '#upb',
      description: 'Tweets from project group knowAAN at UPB',
      tags: '',
      screen_name: 'aandev',
