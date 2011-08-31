@@ -17,46 +17,51 @@ var archivesListsCacheTime = [];
  *                 count of the previously downloaded messages.
  * @param {Function} callback(`ResponseBean`) Comes from the getArchive function.
  */
-function getArchive(selectedArchive, messagesSoFar, callback){
-  //console.log("try to get Archive",selectedArchive, messagesSoFar);
-  if(messagesSoFar !== null){
-    selectedArchive.limit = selectedArchive.limit - messagesSoFar;
-  }
-  if(selectedArchive.limit >0){
-    var url = selectedArchive.ytkUrl+apiGetTweets+selectedArchive.url+'&l='+Math.min(selectedArchive.limit,conf.twapperlyzer.maxMessages);
 
-    helper.getJSON(url,function(jsondata){
-      if(jsondata.status == "ok"){
-        //If the archive is bigger download the missing
-        if(selectedArchive.limit>conf.twapperlyzer.maxMessages){
-          //substract the allready downloaded messages from the total
-          selectedArchive.limit = selectedArchive.limit -conf.twapperlyzer.maxMessages;
-          
-          //Get the missing Messages
-          var firstPartOfArchive = new helper.ResponseBean();
-          firstPartOfArchive.data = jsondata.data;
-          //console.log("firstPartOfArchive",firstPartOfArchive.data.tweets.length, selectedArchive.limit);
-          getMoreMsgs(selectedArchive,firstPartOfArchive,function(msgs){
-            if(firstPartOfArchive.status == "ok"){
-              callback(firstPartOfArchive);
-            }else{
-              gettingArchiveFaild(firstPartOfArchive, callback);
+function getArchive(selectedArchive, messagesSoFar, callback) {
+    //console.log("try to get Archive",selectedArchive, messagesSoFar);
+    if (messagesSoFar !== null) {
+        selectedArchive.limit = selectedArchive.limit - messagesSoFar;
+    }
+    if (selectedArchive.limit > 0) {
+        var url = selectedArchive.ytkUrl + apiGetTweets + selectedArchive.url + '&l=' + Math.min(selectedArchive.limit, conf.twapperlyzer.maxMessages);
+
+        helper.getJSON(url, function(jsondata) {
+            if (jsondata.status == "ok") {
+                //If the archive is bigger download the missing
+                if (selectedArchive.limit > conf.twapperlyzer.maxMessages) {
+                    //substract the allready downloaded messages from the total
+                    selectedArchive.limit = selectedArchive.limit - conf.twapperlyzer.maxMessages;
+
+                    //Get the missing Messages
+                    var firstPartOfArchive = new helper.ResponseBean();
+                    firstPartOfArchive.data = jsondata.data;
+                    //console.log("firstPartOfArchive",firstPartOfArchive.data.tweets.length, selectedArchive.limit);
+                    getMoreMsgs(selectedArchive, firstPartOfArchive, function(msgs) {
+                        if (firstPartOfArchive.status == "ok") {
+                            callback(firstPartOfArchive);
+                        }
+                        else {
+                            gettingArchiveFaild(firstPartOfArchive, callback);
+                        }
+                    });
+
+                }
+                else {
+                    callback(jsondata);
+                }
             }
-          });
-        
-        }else{
-           callback(jsondata);
-        }
-      }else{
-        gettingArchiveFaild(jsondata, callback);
-      }
-    });
-  }else{
-    var res = new helper.ResponseBean();
-    res.status = "error";
-    res.msg = "No need to Update";
-    callback(res);
-  }
+            else {
+                gettingArchiveFaild(jsondata, callback);
+            }
+        });
+    }
+    else {
+        var res = new helper.ResponseBean();
+        res.status = "error";
+        res.msg = "No need to Update";
+        callback(res);
+    }
 }
 
 /**
@@ -65,40 +70,41 @@ function getArchive(selectedArchive, messagesSoFar, callback){
  * @param {`ResponseBean`} msgs The part of the messages that are allready downloded
  * @param {`Function`} callback(`ResponseBean`) the complete set of messages or the error
  */
-function getMoreMsgs(selectedArchive, firstPartOfArchive, callback){
-  if(selectedArchive.limit > 0){
-  
-    //sending the Download progress
-    //everyone.now.sendDownloadProgress(getProgessInPercent(selectedArchive.limit,selectedArchive.totalMsgCount));
-    
-    //Limit should decrise with each recusion step and in the last Step be smaller than conf.twapperlyzer.maxMessages 
-    //this is only importend when the user did a search with specific limit.
-    var urlLimit = Math.min(selectedArchive.limit,conf.twapperlyzer.maxMessages);
-    
-    //The max Id is needed so that the next download start where the last ended.
-    selectedArchive.max_id = (_.last(firstPartOfArchive.data.tweets).id);
-    firstPartOfArchive.data.tweets.pop();
-    urlLimit++;
-    
-    var url = selectedArchive.ytkUrl+apiGetTweets+selectedArchive.url+"&l="+urlLimit+"&max_id="+selectedArchive.max_id;
-    helper.getJSON(url,function(jsondata){
-          if(jsondata.status == "ok"){
-            firstPartOfArchive.status = jsondata.status;
-            firstPartOfArchive.data.tweets = firstPartOfArchive.data.tweets.concat(jsondata.data.tweets);
-            //console.log("firstPartOfArchive",firstPartOfArchive.data.tweets.length, selectedArchive.limit);
-            //Decrising the amount of messages that still need to get downloaded 
-            selectedArchive.limit=selectedArchive.limit-conf.twapperlyzer.maxMessages;
-            getMoreMsgs(selectedArchive, firstPartOfArchive,callback);
-          }
-          else{
-          callback(jsondata);
-          }
-    });
-  }else{
-    //everyone.now.sendDownloadProgress(100);
-    firstPartOfArchive.data.archive_info.count=firstPartOfArchive.data.tweets.length;
-    callback(firstPartOfArchive);
-  }
+
+function getMoreMsgs(selectedArchive, firstPartOfArchive, callback) {
+    if (selectedArchive.limit > 0) {
+
+        //sending the Download progress
+        //everyone.now.sendDownloadProgress(getProgessInPercent(selectedArchive.limit,selectedArchive.totalMsgCount));
+        //Limit should decrise with each recusion step and in the last Step be smaller than conf.twapperlyzer.maxMessages 
+        //this is only importend when the user did a search with specific limit.
+        var urlLimit = Math.min(selectedArchive.limit, conf.twapperlyzer.maxMessages);
+
+        //The max Id is needed so that the next download start where the last ended.
+        selectedArchive.max_id = (_.last(firstPartOfArchive.data.tweets).id);
+        firstPartOfArchive.data.tweets.pop();
+        urlLimit++;
+
+        var url = selectedArchive.ytkUrl + apiGetTweets + selectedArchive.url + "&l=" + urlLimit + "&max_id=" + selectedArchive.max_id;
+        helper.getJSON(url, function(jsondata) {
+            if (jsondata.status == "ok") {
+                firstPartOfArchive.status = jsondata.status;
+                firstPartOfArchive.data.tweets = firstPartOfArchive.data.tweets.concat(jsondata.data.tweets);
+                //console.log("firstPartOfArchive",firstPartOfArchive.data.tweets.length, selectedArchive.limit);
+                //Decrising the amount of messages that still need to get downloaded 
+                selectedArchive.limit = selectedArchive.limit - conf.twapperlyzer.maxMessages;
+                getMoreMsgs(selectedArchive, firstPartOfArchive, callback);
+            }
+            else {
+                callback(jsondata);
+            }
+        });
+    }
+    else {
+        //everyone.now.sendDownloadProgress(100);
+        firstPartOfArchive.data.archive_info.count = firstPartOfArchive.data.tweets.length;
+        callback(firstPartOfArchive);
+    }
 }
 
 
@@ -112,15 +118,16 @@ function getMoreMsgs(selectedArchive, firstPartOfArchive, callback){
  * @param {String} url;
  * @param {Function} callback(`Array`)
  */
-function getMsgs (lastID, limit,ytkUrl,id, callback){
-  var url = ytkUrl+apiGetTweets+"?id="+id+"&l="+limit;
-  if(lastID != 0){
-    url+="&max_id="+lastID;
-  }
-  helper.getJSON(url, function(response){
-      callback(response);
-  });
-};
+
+function getMsgs(lastID, limit, ytkUrl, id, callback) {
+    var url = ytkUrl + apiGetTweets + "?id=" + id + "&l=" + limit;
+    if (lastID !== 0) {
+        url += "&max_id=" + lastID;
+    }
+    helper.getJSON(url, function(response) {
+        callback(response);
+    });
+}
 
 /**
  * Load the archive list from the net and send it to the client
@@ -128,33 +135,41 @@ function getMsgs (lastID, limit,ytkUrl,id, callback){
  * @param {String} ytkUrl The url of the YourTwapperKeeper instance
  * @param {Function} callback(`ResponseBean`)
  */
-function getArchiveList (ytkUrl, callback){
 
-  var getFromNet=false;
-  if(!_.isUndefined(archivesListsCacheTime[ytkUrl])){
-    if((new Date).getTime() - archivesListsCacheTime[ytkUrl].getTime() > conf.twapperlyzer.archivesListsCacheTime){
-      getFromNet = true;
-    }else{getFromNet = false;}
-  }else{getFromNet = true;}
-   
-   if(getFromNet){
-   helper.getJSON(ytkUrl+apiListArchives,function(jsondata){
-        jsondata.data = jsondata.data[0];
-        callback(jsondata);
-        if(jsondata.status == "ok"){
-          archivesListsCache[ytkUrl] = jsondata.data;
-          archivesListsCacheTime[ytkUrl] = new Date;
+function getArchiveList(ytkUrl, callback) {
+
+    var getFromNet = false;
+    if (!_.isUndefined(archivesListsCacheTime[ytkUrl])) {
+        if ((new Date()).getTime() - archivesListsCacheTime[ytkUrl].getTime() > conf.twapperlyzer.archivesListsCacheTime) {
+            getFromNet = true;
         }
-      });
-  }else{
-    var responseBean = new helper.ResponseBean();
-    responseBean.status = "ok";
-    responseBean.data = archivesListsCache[ytkUrl];
-    console.log("archivesListsCache hit for "+ytkUrl);
-    callback(responseBean);
-  }
-};
- 
+        else {
+            getFromNet = false;
+        }
+    }
+    else {
+        getFromNet = true;
+    }
+
+    if (getFromNet) {
+        helper.getJSON(ytkUrl + apiListArchives, function(jsondata) {
+            jsondata.data = jsondata.data[0];
+            callback(jsondata);
+            if (jsondata.status == "ok") {
+                archivesListsCache[ytkUrl] = jsondata.data;
+                archivesListsCacheTime[ytkUrl] = new Date();
+            }
+        });
+    }
+    else {
+        var responseBean = new helper.ResponseBean();
+        responseBean.status = "ok";
+        responseBean.data = archivesListsCache[ytkUrl];
+        console.log("archivesListsCache hit for " + ytkUrl);
+        callback(responseBean);
+    }
+}
+
 
 
 /**
@@ -163,8 +178,9 @@ function getArchiveList (ytkUrl, callback){
  * @param {`ResponseBean`} err
  * @param {Function} callback(`ResponseBean`) Comes from the getArchive function.
  */
-function gettingArchiveFaild(err, callback){
-  console.log('gettingArchiveFaild', err.status);
+
+function gettingArchiveFaild(err, callback) {
+    console.log('gettingArchiveFaild', err.status);
 }
 
 /**
@@ -176,51 +192,51 @@ function gettingArchiveFaild(err, callback){
  * @param {Array} array
  * @return {Object} selectedArchive
  */
-function createSelectedArchiveObject(params){
-  var res = new Object();
-  res.ytkUrl = params.ytkUrl;
-  res.id = params.id;
-  res.url = "?id="+params.id;
-  res.isSearch = false;
-  
-    if(!_.isUndefined(params.startDate)){//Start Date
-      var startDate = params.startDate.split("-");
-      res.url += "&sy="+startDate[0]+"&sm="+startDate[1]+"&sd="+startDate[2];
-      res.isSearch = true;
+
+function createSelectedArchiveObject(params) {
+    var res = {};
+    res.ytkUrl = params.ytkUrl;
+    res.id = params.id;
+    res.url = "?id=" + params.id;
+    res.isSearch = false;
+
+    if (!_.isUndefined(params.startDate)) { //Start Date
+        var startDate = params.startDate.split("-");
+        res.url += "&sy=" + startDate[0] + "&sm=" + startDate[1] + "&sd=" + startDate[2];
+        res.isSearch = true;
     }
-    if(!_.isUndefined(params.endDate)){// End Date
-      var endDate = params.endDate.split("-");
-      res.url += "&ey="+endDate[0]+"&em="+endDate[1]+"&ed="+endDate[2];
-      res.isSearch = true;
+    if (!_.isUndefined(params.endDate)) { // End Date
+        var endDate = params.endDate.split("-");
+        res.url += "&ey=" + endDate[0] + "&em=" + endDate[1] + "&ed=" + endDate[2];
+        res.isSearch = true;
     }
-    if(!_.isUndefined(params.from_user)){//From User
-      res.url += "&from_user="+params.from_user;
-      res.isSearch = true;
+    if (!_.isUndefined(params.from_user)) { //From User
+        res.url += "&from_user=" + params.from_user;
+        res.isSearch = true;
     }
-    if(!_.isUndefined(params.tweet_text)){//Tweet Text
-      res.url += "&tweet_text="+params.tweet_text;
-      res.isSearch = true;
-    }    
-    if(!_.isUndefined(params.o)){//Order
-      res.order=params.o;
-    }    
-    if(!_.isUndefined(params.lang)){//lang
-      res.url += "&lang="+params.lang;
-      res.isSearch = true;
-    }    
-    if(!_.isUndefined(params.nort)){//no RTs
-      res.url += "&nort="+params.nort;
-      res.isSearch = true;
-    } 
-    if(!_.isUndefined(params.l)){//Limit
-      res.limit = params.l
-      //This is tricky cause when somebody put in a limit it will 
-      //be treated like non search. But the next update 
-      //on that archive will fix that.
+    if (!_.isUndefined(params.tweet_text)) { //Tweet Text
+        res.url += "&tweet_text=" + params.tweet_text;
+        res.isSearch = true;
+    }
+    if (!_.isUndefined(params.o)) { //Order
+        res.order = params.o;
+    }
+    if (!_.isUndefined(params.lang)) { //lang
+        res.url += "&lang=" + params.lang;
+        res.isSearch = true;
+    }
+    if (!_.isUndefined(params.nort)) { //no RTs
+        res.url += "&nort=" + params.nort;
+        res.isSearch = true;
+    }
+    if (!_.isUndefined(params.l)) { //Limit
+        res.limit = params.l;
+        //This is tricky cause when somebody put in a limit it will 
+        //be treated like non search. But the next update 
+        //on that archive will fix that.
     }
 
-    
-return res;
+    return res;
 }
 
 
