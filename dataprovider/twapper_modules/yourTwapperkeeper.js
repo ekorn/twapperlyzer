@@ -4,9 +4,9 @@ var helper = require('./helper.js');
 var conf = require('config');
 
 var apiListArchives = "/apiListArchives.php";
-var apiGetTweets =  "/apiGetTweets.php";
-var archivesListsCache = new Array();
-var archivesListsCacheTime = new Array();
+var apiGetTweets = "/apiGetTweets.php";
+var archivesListsCache = [];
+var archivesListsCacheTime = [];
 
 /**
  * Load the selectedArchive from the net, after getting the archive info and the 
@@ -19,7 +19,7 @@ var archivesListsCacheTime = new Array();
  */
 function getArchive(selectedArchive, messagesSoFar, callback){
   //console.log("try to get Archive",selectedArchive, messagesSoFar);
-  if(messagesSoFar != null){
+  if(messagesSoFar !== null){
     selectedArchive.limit = selectedArchive.limit - messagesSoFar;
   }
   if(selectedArchive.limit >0){
