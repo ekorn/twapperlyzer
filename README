@@ -4,15 +4,15 @@ Twapperlyzer is divided in two parts:
 
 to get it working you need node(>=v.0.49) and npm then 
 git clone https://github.com/ekorn/twapperlyzer
-cd twapperlyzer
+cd twapperlyzer/dataprovider
 npm install -d
 npm install forever -g
-npm install couchapp -g
 cd config
 cp default_template.json default.json
 adjust default.json
-cd..
+cd ..
 forever start app2.js
-cd viewer 
+cd ../viewer 
+npm install couchapp -g
 couchapp push app.js url
 create the couch config

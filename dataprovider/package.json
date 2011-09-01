@@ -13,5 +13,7 @@
     , "underscore": ">=1.1.7" 
     , "underscore.string": ">=1.1.5" 
     , "unshortener": ">=0.0.8" 
+    , "glossary": "=>0.1.0"
+    , "restler": "=>0.2.1"
   }
 }
