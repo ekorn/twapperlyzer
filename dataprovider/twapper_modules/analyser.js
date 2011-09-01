@@ -23,6 +23,7 @@ var regExUsernames = /(^|\s)@(\w+)/g;
 var regExHashtags  = /(^|\s)#(\w+)/g;
   
 function analyseMesseges(archiveInfo, callback){
+	var response = {};
   var msgByDate = [];
   _.each(archiveInfo.tweets.reverse(), function(message){
     
@@ -95,9 +96,11 @@ function analyseMesseges(archiveInfo, callback){
     msgForCurrentDate.keywords = glossary.extract(msgForCurrentDate.alltext);
   });
   
-  
-  callback((_.sortBy(msgByDate, function(entry){return entry.weight})).reverse());
-  //callback(msgByDate);
+  response.archive_info = archiveInfo.archive_info;
+  response.messagesSoFar = archiveInfo.messagesSoFar + archiveInfo.tweets.length;
+  response.msgByDate = msgByDate
+  //callback((_.sortBy(msgByDate, function(entry){return entry.weight})).reverse());
+  callback(response);
 }
 
 function analyseMessegesOLD(archiveInfo, callback){
@@ -318,13 +321,13 @@ function getGeoMarkerFromMessage(message, geoMarkerSoFar){
   if(message.geo_coordinates_0 != 0 || message.geo_coordinates_1 != 0){
     //detect if the was already a message send at this place
     var wasSeen =  _.detect(geoMarkerSoFar, function(marker){
-      return (marker.lat == message.geo_coordinates_0 && marker.long == message.geo_coordinates_1);
+      return (marker.lat == message.geo_coordinates_0 && marker.lon == message.geo_coordinates_1);
       });
     if(_.isUndefined(wasSeen)){
       //Setting uo a new marker with a position
       var geoMarkerInfo = {};
       geoMarkerInfo.lat = message.geo_coordinates_0;
-      geoMarkerInfo.long = message.geo_coordinates_1;
+      geoMarkerInfo.lon = message.geo_coordinates_1;
       
       //a user with name
       var user = {};

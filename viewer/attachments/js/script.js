@@ -621,7 +621,7 @@ function createArchivePage(requestedLaid, callback){
         l.name = "l";
         twapperSession.selectedArchive = createSelectedArchiveObject([id,l]);
         $.mobile.showPageLoadingMsg();
-        twapperlyzerApi.getArchiveFromDataprovider(twapperSession.selectedArchive.url,config.thisdb, userOptions.dataprovider,function(data){
+        getArchiveFromDataprovider(twapperSession.selectedArchive.url,config.thisdb, userOptions.dataprovider,function(data){
           setData(data,callback);
           twapperSession.lastLaid = twapperSession.laid;
         });
