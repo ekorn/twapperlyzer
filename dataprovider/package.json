@@ -6,7 +6,7 @@
     "repository": {
         "type": "git",
         "url": "https://github.com/ekorn/twapperlyzer.git"
-    },
+    }
   , "private": true
   , "dependencies": {
       "express": "2.3.11"
