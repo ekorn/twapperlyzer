@@ -1,11 +1,17 @@
 {
-    "name": "twaperlyzer"
-  , "version": "0.0.2"
+    "name": "twaperlyzer",
+    "description": "A Hashtag Community Analyser",
+    "version": "0.2.0",
+    "author": "Nico Lehmann <nlehmann@mailDOTupbDOTde>",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ekorn/twapperlyzer.git"
+    },
   , "private": true
   , "dependencies": {
       "express": "2.3.11"
     , "jade": ">= 0.0.1"
-    , "validator": >= "0.2.6"
+    , "validator": ">=0.2.6"
     , "config": ">=0.4.2"
     , "cradle": ">=0.5.5"    
     , "oauth": ">=0.9.3"  
