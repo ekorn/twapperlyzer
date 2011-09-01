@@ -5,7 +5,7 @@ var userOptions = {};
 var config;
 var messages = {};
 var mydb;
-var twapperSession = new Object(); //The temporary variable where all the session data is stored
+var twapperSession = {}; //The temporary variable where all the session data is stored
 twapperSession.archiveList = [];
 twapperSession.archives = [];
 twapperSession.localArchiveList =[];
@@ -56,7 +56,7 @@ createPages();
   $("#dataProviderSelect").change(function(){
     $("#dataProviderField").val($(this).val());
   });
-  $('#clearUserConfigButton').click(clearUserConfigHandler)
+  $('#clearUserConfigButton').click(clearUserConfigHandler);
 
   //list Archives Page 
   $('#listArchivesPage').live('pagebeforeshow',listArchivesPageHandler);
@@ -86,7 +86,7 @@ function createDialog(html){
         'mode' : 'blank',
         'prompt': false,
         'forceInput': false,
-        'fullHTML' : twapperSession.templates.simpleDialog(html),
+        'fullHTML' : twapperSession.templates.simpleDialog(html)
     });
 }
 
@@ -120,7 +120,7 @@ function dbReady(info){
         $.mobile.hidePageLoadingMsg();
         
         //ERROR
-        if(err != null){
+        if(err !== null){
           //IT's likly that this is the first visit
           if (err == messages.configNotFound){
 
@@ -132,7 +132,7 @@ function dbReady(info){
             //Try if it is working
             loadUserConfig(function(err,res){
               //Fine it is working 
-              if(err==null){
+              if(err===null){
                 var simpleDialog = {
                   "dialogHeader":"No Config found", 
                   "dialogText":"Since twapperlyzer could not find a configuration, it will set up the default one. You can change the default settings by clicking options in the upper right corner.",
@@ -188,7 +188,7 @@ function dbReady(info){
         });
       },
       error: function(status) {
-          popErrorMessage("Clod not load already analysed archives"+status, 3000)
+          popErrorMessage("Clod not load already analysed archives"+status, 3000);
       }
   });
   
@@ -307,15 +307,15 @@ function createPages(){
 function loadUserConfig(callback){
   var twapperlyzerStore = new Lawnchair('twapperlyzerStore', function(){});
   twapperlyzerStore.get('twapperlyzerOfflineOptions', function(twapperlyzerOptions) {
-    if(twapperlyzerOptions != null){
+    if(twapperlyzerOptions !== null){
       userOptions = twapperlyzerOptions;
     }
   });
   twapperlyzerStore.get('twapperlyzerOnlineOptions', function(twapperlyzerOptions) {
-    if(twapperlyzerOptions != null){
+    if(twapperlyzerOptions !== null){
 
       twapperlyzerApi.testConfig(twapperlyzerOptions.dataprovider, twapperlyzerOptions.ytkUrl, function(err, list){
-        if(err == null){
+        if(err === null){
           userOptions.ytkUrl = twapperlyzerOptions.ytkUrl;
           userOptions.dataprovider = twapperlyzerOptions.dataprovider;
           twapperSession.ytkUrlHash = MD5(twapperlyzerOptions.ytkUrl);
@@ -324,7 +324,7 @@ function loadUserConfig(callback){
             listEntry.aId = listEntry.id;
             listEntry.id = twapperSession.ytkUrlHash +"-"+listEntry.id;
             twapperSession.archiveList.push(listEntry);
-          })
+          });
 
           $('#listRemoteArchivesButton .ui-btn-text').text("List archives from YourTwapperkeeper ("+twapperSession.archiveList.length+")");
           $('#ytkURLField').val(userOptions.ytkUrl);
@@ -348,7 +348,7 @@ function loadUserConfig(callback){
  * @return {Number|String} the id or the string "error" 
  */
 function getArchivesForSearchterm(value, archiveList, localArchivesList){
-  if(value == "" ){
+  if(value === "" ){
     return [];
   }
   if(isNaN(value)){
@@ -361,7 +361,7 @@ function getArchivesForSearchterm(value, archiveList, localArchivesList){
     if(res[0].length > 0 || res[1].length > 0 ){
       return res;
     }else{
-      return []
+      return [];
     }
   }
   //console.log(value, archiveList.length)
@@ -395,10 +395,10 @@ function getArchivesListForSerachtermHelper(value, archiveList, hash){
 function optionsPageHandler(){
   fillSelect($('#ytkURLSelect'), config.ytkUrls);
   fillSelect($('#dataProviderSelect'), config.dataprovider);
-  if($('#ytkURLField').val() == ""){
+  if($('#ytkURLField').val() === ""){
      $('#ytkURLField').val(config.ytkUrls[0]);
   }
-  if($('#dataProviderField').val() == ""){
+  if($('#dataProviderField').val() === ""){
      $('#dataProviderField').val(config.dataprovider[0]);
   }
 
@@ -419,10 +419,10 @@ function optionsFormHandler(event){
   var dataprovider = $('#dataProviderField').val();
 
   //Cutting the Slash off if needed
-  if (ytkUrl!=null && ytkUrl!=""){
-    if(ytkUrl.lastIndexOf("/") == (ytkUrl.length-1)) {
+  if (ytkUrl!==null && ytkUrl!==""){
+    if(ytkUrl.lastIndexOf("/") === (ytkUrl.length-1)) {
       ytkUrl=ytkUrl.slice(0,ytkUrl.length-1);
-      $('#ytkURLField').val(ytkUrl)
+      $('#ytkURLField').val(ytkUrl);
     }
   }
   var twapperlyzerStore = new Lawnchair('twapperlyzerStore', function(){});
@@ -431,7 +431,7 @@ function optionsFormHandler(event){
   twapperlyzerStore.save(new twapperlyzerClientOfflineOptions());
   
   loadUserConfig(function(err,res){
-    if(err==null){
+    if(err===null){
       $.mobile.changePage("#listArchivesPage",{transition: "slide",reverse: true});
       appendNewURLsToConfig([ytkUrl,dataprovider], [config.ytkUrls,config.dataprovider]);
 
@@ -526,7 +526,7 @@ function generateArchiveList(parent, archiveList,localArchiveList, orderType){
     var remoteDivider = '<li data-role="list-divider">Archives from YourTwapperkeeper</li> ';
      parent.append(remoteDivider);
     parent.append(twapperSession.templates.archiveListElements(archiveListData));
-    var hash = archiveList[0].id.split("-")[0]
+    var hash = archiveList[0].id.split("-")[0];
     localArchiveList = _.reject(localArchiveList, function(archive){
       return archive.id.split("-")[0] == hash;
     }); 
@@ -540,20 +540,21 @@ function generateArchiveList(parent, archiveList,localArchiveList, orderType){
   parent.listview('refresh');
   
   function compareKeywords(a, b) {
-    
-    var elementA = cutFirstChar(a.keyword.toLowerCase());
-    var elementB = cutFirstChar(b.keyword.toLowerCase());
-
-    if (elementA < elementB) {return -1}
-    if (elementA > elementB) {return 1}
-    return 0;
-
     function cutFirstChar(keyword){
       if(keyword.charAt(0) == "#" || keyword.charAt(0) == "@"){
         keyword = keyword.substring(1,keyword.length);
       }
       return keyword;
     }
+    
+    var elementA = cutFirstChar(a.keyword.toLowerCase());
+    var elementB = cutFirstChar(b.keyword.toLowerCase());
+
+    if (elementA < elementB) {return -1;}
+    if (elementA > elementB) {return 1;}
+    return 0;
+
+
   }
   
 
@@ -592,14 +593,14 @@ function createArchivePage(requestedLaid, callback){
     mydb.openDoc( requestedLaid,  
       {success: function(data) {
           setData(data, callback);
-          if (twapperSession.ytkUrlHash != null){
-            var listEntry = _.detect(twapperSession.archiveList, function(le){return le.id == requestedLaid});
+          if (twapperSession.ytkUrlHash !== null){
+            var listEntry = _.detect(twapperSession.archiveList, function(le){return le.id == requestedLaid;});
             if(twapperSession.ytkUrlHash == hashId[0] && !_.isUndefined(listEntry)){
               if(data.messagesSoFar != listEntry.count){
                 console.log("");
                 var url = "docID="+requestedLaid+"&l="+listEntry.count;
                 twapperlyzerApi.updateArchive(url,config.thisdb, userOptions.dataprovider, function(err, result){
-                  if(err!=null){
+                  if(err!==null){
                     popErrorMessage("Could not update this archive: "+err.msg, 2000);
                   }else{
                     popSimpleMessage("Updating this archive: "+err.msg, 2000);
@@ -610,12 +611,12 @@ function createArchivePage(requestedLaid, callback){
           }
           
           twapperSession.lastLaid = twapperSession.laid;
-        }
-      ,error: function(){
-        var id = new Object();
+        },
+        error: function(){
+        var id = {};
         id.value = hashId[1];
         id.name = "id";
-        var l = new Object();
+        var l = {};
         l.value = "";
         l.name = "l";
         twapperSession.selectedArchive = createSelectedArchiveObject([id,l]);
@@ -628,7 +629,7 @@ function createArchivePage(requestedLaid, callback){
       }
     );
   }else{
-    callback("#page-"+twapperSession.laid)
+    callback("#page-"+twapperSession.laid);
   }
 }
 
@@ -642,7 +643,7 @@ function createArchivePage(requestedLaid, callback){
  
 function getArchiveFromDataprovider(selectedArchiveUrl,thisdb, dataprovider, callback){
     twapperlyzerApi.createOrUpdateArchive(selectedArchiveUrl, thisdb, dataprovider, function(err, result){
-      if(err!=null){
+      if(err!==null){
         popErrorMessage("Could not analyse this archive: "+err.msg, 2000);
       }else{
         mydb.openDoc(result.id,  
@@ -656,7 +657,7 @@ function getArchiveFromDataprovider(selectedArchiveUrl,thisdb, dataprovider, cal
 
 
 function setData(data,callback){
-  if($('#page-'+data._id).length == 0){
+  if($('#page-'+data._id).length === 0){
     twapperSession.archives[data._id] = data;
     
     //Main Archive Page
@@ -694,7 +695,7 @@ function setData(data,callback){
   }
   
   $.mobile.hidePageLoadingMsg();
-  callback("#page-"+data._id)
+  callback("#page-"+data._id);
 }
 
 /**
@@ -721,19 +722,19 @@ function updateTheDownloadSlider(progress) {
 function checkArchiveParts(currentArchive){
   updateMsgTotal(currentArchive.messagesSoFar);
   
-  if(currentArchive.geoMarker.length != 0){
+  if(currentArchive.geoMarker.length !== 0){
     partIsSaved("geoMarker");
   }
-  if(currentArchive.urls.length != 0){
+  if(currentArchive.urls.length !== 0){
      partIsSaved("urls");
   }
-  if(currentArchive.hashtags.length != 0){
+  if(currentArchive.hashtags.length !== 0){
      partIsSaved("hashtags");
   }
-  if(currentArchive.mentions.length != 0){
+  if(currentArchive.mentions.length !== 0){
      partIsSaved("mentions");
   }
-  if(currentArchive.users.length != 0){
+  if(currentArchive.users.length !== 0){
      partIsSaved("users");
   }  
   
@@ -798,7 +799,7 @@ function archiveWidgetsListHandler(event){
     switch(pageHashId[0]){
       
       case "#showMsgsPage" :
-        if($(target).length == 0){
+        if($(target).length === 0){
           Handlebars.registerPartial('content', twapperSession.templates.listContent);
           Handlebars.registerPartial('footer', twapperSession.templates.buttonFooter);
           var showMsgsPage = {
@@ -823,12 +824,12 @@ function archiveWidgetsListHandler(event){
       break;
       
       case "#mapPage" :
-        setUpGeoMarkerForArchive(twapperSession.archives[laid].geoMarker,'mapContainer-'+laid)
+        setUpGeoMarkerForArchive(twapperSession.archives[laid].geoMarker,'mapContainer-'+laid);
         $.mobile.changePage(target);
       break;
       
       case "#archiveMentionsPage" :
-        if($(target).length == 0){
+        if($(target).length === 0){
           Handlebars.registerPartial('content', twapperSession.templates.blockListContent);
           Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
           var mentionsPage = {
@@ -855,7 +856,7 @@ function archiveWidgetsListHandler(event){
         }
       break;
       case "#archiveHashtagsPage" :
-        if($(target).length == 0){
+        if($(target).length === 0){
           Handlebars.registerPartial('content', twapperSession.templates.blockListContent);
           Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
           var hashtagsPage = {
@@ -881,7 +882,7 @@ function archiveWidgetsListHandler(event){
         }
       break;
       case "#archiveLinksPage" :
-        if($(target).length == 0){
+        if($(target).length === 0){
           Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
           Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
           var linksPage = {
@@ -900,7 +901,7 @@ function archiveWidgetsListHandler(event){
         }
       break;
       case "#archiveMembersPage" :
-        if($(target).length == 0){
+        if($(target).length === 0){
           Handlebars.registerPartial('content', twapperSession.templates.listContent);
           Handlebars.registerPartial('footer', twapperSession.templates.navbarMemberFooter);
           var membersPage = {
@@ -982,13 +983,13 @@ function loadMessagesFromServer(){
   var laid = getLaidFromPageName();
   var currentArchive = twapperSession.archives[laid];
   var lastID=0;
-  if(currentArchive.tweets.length != 0 ){
+  if(currentArchive.tweets.length !== 0 ){
     
     lastID = currentArchive.tweets[currentArchive.tweets.length-1].id;
   }
   if(currentArchive.currentMsg <= currentArchive.messagesSoFar){
     twapperlyzerApi.getMsgs(lastID,userOptions.addMsgVal, userOptions.ytkUrl, currentArchive.archive_info.id,userOptions.dataprovider, function(response){
-      if(currentArchive.tweets.length != 0 ){
+      if(currentArchive.tweets.length !== 0 ){
         response.shift();
       }
       currentArchive.tweets = currentArchive.tweets.concat(response);
@@ -998,7 +999,7 @@ function loadMessagesFromServer(){
         var entry = currentArchive.tweets[currentArchive.currentMsg];
         entry.msgid = currentArchive.currentMsg;
         entry.laid = laid;
-        if(entry.geo_coordinates_0 == 0){
+        if(entry.geo_coordinates_0 === 0){
           entry.geo_coordinates_0 = false;
         }
         msgList.append(twapperSession.templates.msgEntryTemplate(entry));
@@ -1016,7 +1017,7 @@ function loadMessagesFromServer(){
  *
  */
 function exportMessageEntry(event) {  
-  if ($(this).attr("msgid") != null){
+  if ($(this).attr("msgid") !== null){
     var laid = getLaidFromPageName();
     // set the map view to a given center and zoom and add the CloudMade layer
     var entry = twapperSession.archives[laid].tweets[$(this).attr("msgid")];
@@ -1044,28 +1045,28 @@ function getLaidFromPageName(){
  * @return {Object} selectedArchive
  */
 function createSelectedArchiveObject(array){
-  res = new Object;
+  res = {};
   var laid = twapperSession.ytkUrlHash+"-"+array[0].value;
   res.entry = _.detect(twapperSession.archiveList, function(le)
-    {return le.id == laid});
+    {return le.id === laid;});
 
   res.isSearch = false;
   url = "ytkUrl="+userOptions.ytkUrl;
 
   _.each(array, function(element){
       //every fild that is set will get in the url
-      if(element.value != ""){
+      if(element.value !== ""){
         url += "&"+element.name+"="+element.value;
-        if(!element.value == "o"){
+        if(element.value !== "o"){
           res.isSearch = true;
         }
       }
-      if(element.name == "nort" && element.value != null){
+      if(element.name === "nort" && element.value !== null){
          url += "&"+element.name+"="+element.value;
          res.isSearch = true;
       }
       //and the limit even if it is not set
-      if(element.name == "l" && element.value == ""){
+      if(element.name === "l" && element.value === ""){
         url += "&l="+ res.entry.count;
       }
     });
