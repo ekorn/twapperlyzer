@@ -22,6 +22,6 @@
     , "glossary": ">=0.1.0"
     , "restler": ">=0.2.1"
     , "languagedetect": ">=0.0.1"
-    , "glossary": ">=0.1.1"
+    , "glossary": ">=0.1.0"
   }
 }
