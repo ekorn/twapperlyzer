@@ -152,7 +152,7 @@ function createAlert(html){
         'mode' : 'blank',
         'prompt': false,
         'forceInput': false,
-        'fullHTML' : twapperSession.templates.simpleDialog(html)
+        'fullHTML' : twapperSession.templates.simpleAlert(html)
     });
 }
 
@@ -220,14 +220,13 @@ function dbReady(info){
                   "target": ""
                 };
                 //Lets inform the user about the default conf and route him to his target
-                if(_.isUndefined($_GET.laid)){
+                if(document.location.hash === ""){
                   simpleDialog.target = "#listArchivesPage";
                   createAlert(simpleDialog);
                 }else{
-                  createArchivePage($_GET.laid, function(page){
-                    simpleDialog.target = page;
-                    createAlert(simpleDialog);
-                  });
+                  simpleDialog.target = document.location.hash;
+                  createAlert(simpleDialog);
+                  $.mobile.changePage(document.location.hash,{ transition: "fade"} );
                 }
               }else{//Default Conf does not work this should never happen 
                 var simpleDialog = {
@@ -340,7 +339,7 @@ function createPages(){
   //Compile Templates
   twapperSession.templates = {};
   twapperSession.templates.page = Handlebars.compile( $("#page").html() );
-  twapperSession.templates.simpleDialog = Handlebars.compile( $("#simpleDialog").html() );
+  twapperSession.templates.simpleAlert = Handlebars.compile( $("#simpleAlert").html() );
   
   twapperSession.templates.normalHeader = Handlebars.compile( $("#normalHeader").html() );
   twapperSession.templates.msgEntryTemplate = Handlebars.compile( $("#msgEntryTemplate").html() );
