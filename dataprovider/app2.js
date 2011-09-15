@@ -294,7 +294,7 @@ function analyseAndUpdate(archiveInfo, currentDB, request, response){
             var analyseTime = (new Date().getTime()- ptime.getTime());
             var tweet = "after "+helper.convertMilliseconds(analyseTime).clock+" is #twapperlyzer done with "+analysePart.archive_info.keyword
             if (res) {
-              tweet+=" see http://"+res.standardUrl+"/index.html?laid="+analysePart._id
+              tweet+=" see http://"+res.standardUrl+"/#page-"+analysePart._id;
             }
             if(exist(request.query.mention) && request.query.mention !== "" ){
               tweet = "@"+request.query.mention+" "+tweet

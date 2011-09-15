@@ -4,7 +4,6 @@ var _ = require('underscore')._,
     glossary = require("glossary"),
     language = readAllStopwordFilesSync(__dirname+"/stopwords");
 
-  
 function extract(text, options){
   return glossary(options).extract(text);
 }
