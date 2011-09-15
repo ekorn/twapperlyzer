@@ -8,16 +8,21 @@
 /**
  * Module dependencies
  */
+var conf = require('config');
 var crypto = require('crypto');
 var express = require('express');
-var cradle = require('cradle');
 var request = require('request');
 var _ = require('underscore')._;
 _.mixin(require('underscore.string'));
+var OAuth = require('oauth').OAuth;
+var oAuth= new OAuth("http://twitter.com/oauth/request_token",
+                 "http://twitter.com/oauth/access_token", 
+                 conf.twitter.consumerKey,  conf.twitter.consumerSecret, 
+                 "1.0A", null, "HMAC-SHA1");
 var analyser = require('./twapper_modules/analyser.js');
 var helper = require('./twapper_modules/helper.js');
 var ytk = require('./twapper_modules/yourTwapperkeeper.js');
-var conf = require('config');
+
 var check = require('validator').check;
 var sanitize = require('validator').sanitize;
 
@@ -25,7 +30,7 @@ var app = module.exports = express.createServer();
 
 var conn;
 var db;
-getDBConnectionFromConfig(conf.couchdb, function(error, database, connection){
+helper.getDBConnectionFromConfig(conf.couchdb, function(error, database, connection){
   if(error == null){
     conn = connection;
     db  = database;
@@ -124,13 +129,13 @@ function getArchiveListHandler(req, res){
  * @param targetUrl
  */
 function analyseArchiveHandler(req, res){
-  //console.log("I got",req.url);
+  console.log("I got",req.url);
   var myDateRegEx = /([0-9]{4})-([0-1]{0,1}[0-9]{1})-([0-3]{0,1}[0-9]{1})/;
   // The expression is quite bad bit it is better than nothing
   try {
     parameterCheck(req);
     //Parameter check done
-    
+
     getDBConnection(req.query, function(error, dbToSave, connection){
       if(error != null){
         sendError(req, res, error);
@@ -139,27 +144,9 @@ function analyseArchiveHandler(req, res){
         ytk.getArchive(selectedArchive, 0, function(archive){
           if(archive.status == "ok"){
             var archiveInfo = createBasicArchiveInfo(selectedArchive, archive.data);
-            
-            var tweetRamStore = archiveInfo.tweets;
-            archiveInfo.tweets = new Array();
-            dbToSave.save(archiveInfo, function (err, result) {
-              if (!result){
-                sendError(req, res, err);
-                        
-              }else{
-                
-                archiveInfo.tweets = tweetRamStore;
-                analyseAndUpdate(archiveInfo, dbToSave);
-                //Inform the client
-                var urlToDoc = "http://"+connection.host+":"+connection.port+"/"+dbToSave.name+"/"+result.id;
-                
-                result.status = "ok";
-                result.url = urlToDoc;
-                console.log("Document saved. at "+ urlToDoc);
-
-                sendJSON(req, res,  result);
-              }
-            });
+            analyseAndUpdate(archiveInfo, dbToSave, req, res);
+//Useless since the information is distributed in x docs
+//var urlToDoc = "http://"+connection.host+":"+connection.port+"/"+dbToSave.name+"/"+result.id;
           }else{
             sendError(req, res, archive.msg);
           }
@@ -194,8 +181,10 @@ function updateArchiveHandler(req, res){
       sendError(req, res, error);
     }else{
 
-      dbToSave.get(req.query.docID, function (err, archiveInfoFromDB) {
+      dbToSave.get([req.query.docID,req.query.docID+"-qu"], function (err, docs) {
         if (err == null){
+          archiveInfoFromDB = docs[0].doc;
+          archiveInfoFromDB.questionsDoc = docs[1].doc;
           req.query.id = archiveInfoFromDB.archive_info.id;
           req.query.ytkUrl = archiveInfoFromDB.ytkUrl;
             //console.log("updateArchiveHandler",req.query.ytkUrl,archiveInfoFromDB.ytkUrl);
@@ -205,12 +194,7 @@ function updateArchiveHandler(req, res){
             if(archive.status == "ok"){
               archiveInfoFromDB.tweets = archive.data.tweets;
               archiveInfoFromDB.archive_info.count = archive.data.archive_info.count;
-              analyseAndUpdate(archiveInfoFromDB, dbToSave);
-              var updating = new helper.ResponseBean();
-              updating.status = "ok";
-              updating.msg = "updating";
-              updating.id = archiveInfoFromDB._id;
-              sendJSON(req, res, updating);
+              analyseAndUpdate(archiveInfoFromDB, dbToSave, req, res);
             }
             else{
               if(archive.msg == "No need to Update"){
@@ -288,15 +272,46 @@ function createOrUpdateArchiveHandler(req, res){
   }
 }
 
-function analyseAndUpdate(archiveInfo, currentDB){
-  analyser.analyseMesseges(archiveInfo, function(result){
-    //Update the DB
-    currentDB.merge(archiveInfo._id, result, function (err, res) {
-       if (!res)
-        console.log(err,_.keys(result));
-        else{
-          console.log("Document updated with",_.keys(result));
+function analyseAndUpdate(archiveInfo, currentDB, request, response){
+  var ptime = new Date();
+  analyser.analyseMesseges(archiveInfo, function(err, analysePart, callback){
+    if (err) throw err;
+    db.save(analysePart._id, analysePart, function (err, res) {
+      if (err) {
+        console.log("Error while save ",err);
+        throw err;
+      }
+      if(!_.isUndefined(analysePart.messagesSoFar)){
+        if(analysePart.status === "analysing"){
+          callback(null, "ok")
+          var updating = new helper.ResponseBean();
+          updating.status = "ok";
+          updating.msg = "analysing";
+          updating.id = archiveInfo._id;
+          sendJSON(request, response, updating);
+        }else if(analysePart.status === "done"){
+          db.get("config", function(err, res){
+            var analyseTime = (new Date().getTime()- ptime.getTime());
+            var tweet = "after "+helper.convertMilliseconds(analyseTime).clock+" is #twapperlyzer done with "+analysePart.archive_info.keyword
+            if (res) {
+              tweet+=" see http://"+res.standardUrl+"/index.html?laid="+analysePart._id
+            }
+            if(exist(request.query.mention) && request.query.mention !== "" ){
+              tweet = "@"+request.query.mention+" "+tweet
+            }
+            if(conf.twapperlyzer.sendTweets === true){
+              oAuth.post("http://api.twitter.com/1/statuses/update.json", conf.twitter.accessToken, 
+              conf.twitter.accessTokenSecret, {"status":tweet}, function(error, data) {
+                if(error) console.log(require('sys').inspect(error));
+              }); 
+            }else{
+              console.log("tweet",tweet);
+            }
+          });
         }
+      }else{
+        callback(null, "ok")
+      }
     });
   });  
 }
@@ -305,7 +320,7 @@ function parameterCheck(req){
     var myDateRegEx = /([0-9]{4})-([0-1]{0,1}[0-9]{1})-([0-3]{0,1}[0-9]{1})/;
     // The expression is quite bad bit it is better than nothing
   
-    check(req.query.ytkUrl, "Parameter error: in URL").isUrl();
+    check(req.query.ytkUrl, "Parameter error: in URL "+req.query.ytkUrl).isUrl();
     check(req.query.l, "Parameter error: in limit").isInt();
     check(req.query.id, "Parameter error: in id").isInt();
     if(exist(req.query.nort)) check(req.query.nort).isAlpha();
@@ -316,6 +331,8 @@ function parameterCheck(req){
     if(exist(req.query.o)) check(req.query.o).is(/[a,d]/);
     if(exist(req.query.lang)) check(req.query.lang).isAlpha().len(2, 2);
     if(exist(req.query.callback)) check(req.query.callback).notEmpty();
+    if(exist(req.query.mention)) check(req.query.mention).isAlphanumeric().len(0, 15);
+    
     //DB Params
     if(exist(req.query.dbHost)) {
       //check(req.query.dbHost).isUrl();
@@ -343,65 +360,14 @@ function createBasicArchiveInfo(selectedArchive, archive){
   doc.archive_info = archive.archive_info;
   doc.messagesSoFar = 0;
   doc.timestamp = new Date();
-  doc.lastMessage = 0;
+  doc.status = "init";
   doc.isSearch = selectedArchive.isSearch;
   doc.ytkUrl = selectedArchive.ytkUrl;
-  //fields for analyses
-  doc.urls = new Array();
-  doc.geoMarker = new Array();
-  doc.mentions = new Array();
-  doc.hashtags = new Array();
-  doc.users = new Array();
+  doc.questionsDoc =  {"_id": doc._id+"-qu", "type":"questions", "questions": []};
   doc.tweets = archive.tweets;
   
   return doc;
 }
-
-//Legancy no longer needed
-function getDBParamsFromURL(dbUrl){
-  var httpsRegEx = /(https):\/\//;
-  var secure = httpsRegEx.test(dbUrl);
-  dbUrl = dbUrl.replace("http://","");
-  dbUrl = dbUrl.replace("https://","");
-  var res = new Object();
-  
-  var userPassword;
-
-  var hostPort;
-  var tmp = _.words(dbUrl, "@");
-  if(tmp.length == 2){
-    userPassword = _.words(tmp[0], ":");
-    //delete http if necessary 
-    
-    tmp2 = _.words(tmp[1], "/");
-  }else{
-    tmp2 = _.words(tmp[0], "/");
-  }
-    hostPort = _.words(tmp2[0], ":");
-    if(tmp2.length ==3 ){
-      res.doc = tmp2[2];
-    }
-
-    res.dbname = tmp2[1]
-    
-    
-    var options = new Object ();
-    
-    if(secure){
-      options.secure = true;
-    }
-    if(!_.isUndefined(userPassword)){
-      options.auth = { username: userPassword[0], password: userPassword[1] };
-    }
-  
-
-  res.host = hostPort[0];
-  res.port = hostPort[1];
-  res.options = options;
-  
-  return res;
-}
-
 function getDBParamsFromParams(params){
  
   var res = new Object();
@@ -429,45 +395,13 @@ function getDBConnection(params, callback){
   if(exist(params.dbHost)){
     var dbConf = getDBParamsFromParams(params);
     if(dbConf.host != conf.couchdb.host || dbConf.dbname != conf.couchdb.dbname){
-      getDBConnectionFromConfig(dbConf,callback);
+      helper.getDBConnectionFromConfig(dbConf,callback);
     }
     else{callback(null, db, conn);}
   }else{
     callback(null, db, conn);
   }
 }
-
-function getDBConnectionFromConfig(dbConf, callback){
-  var connection = new(cradle.Connection)(dbConf.host,dbConf.port, dbConf.options);
-
-  connection.info(function (err, json) {
-    if (err == null){
-      console.log("Couchdb ("+json.version+") at "+dbConf.host+" connected.");
-      var forenDb = connection.database(dbConf.dbname); 
-      // Create the db if it doesn't exist.
-      forenDb.exists(function (error, exists) {
-              if (!exists) {
-                forenDb.create( 
-                  function(error, res){
-                    if(error == null){
-                      callback(null, forenDb, connection);
-                    }else{
-                      callback(error, null,null);
-                    }
-                  });
-              }else callback(null, forenDb, connection);
-      });
-    }
-    else{
-      err.host = dbConf.host;
-      callback(err, null);
-      //console.log("info() failed to connect to couchdb : ", err);
-    }
-  });
-
-
-}
-
 function exist(param){
  return !(typeof param === 'undefined');
 }

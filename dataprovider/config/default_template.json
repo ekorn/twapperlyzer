@@ -3,12 +3,15 @@
       "consumerKey": "",
       "consumerSecret": "",
       "accessToken": "",
-      "accessTokenSecret": ""
+      "accessTokenSecret": "",
+      "username":""
     },
     "twapperlyzer":{
       "port": "3000",
       "maxMessages": 500,
-      "archivesListsCacheTime": 10000
+      "archivesListsCacheTime": 10000,
+      "alchemyapi":"",
+      "sendTweets": true
     },
     "couchdb": {
       "host": "",

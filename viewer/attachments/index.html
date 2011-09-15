@@ -37,7 +37,7 @@
 	<!-- more tags for your 'head' to consider https://gist.github.com/849231 -->
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/jquery.mobile-1.0b2.min.css" type="text/css" media="screen" charset="utf-8" /> 
+  <link rel="stylesheet" href="css/jquery.mobile-1.0b3.min.css" type="text/css" media="screen" charset="utf-8" /> 
   <link rel="stylesheet" href="css/style.css?v=1" type="text/css" media="screen" charset="utf-8"> 
   <!-- <link rel="stylesheet" href="css/jquery.mobile.datebox-1.0b1.min.css" type="text/css" media="screen" charset="utf-8" />  -->
   <link rel="stylesheet" href="css/jquery.mobile.simpledialog.min.css" type="text/css" media="screen" charset="utf-8" />
@@ -50,22 +50,18 @@
 </head>
 
 <body>
-  <div data-role="page">
+  <div data-role="page" data-url="loadPage" id="loadPage">
      <noscript><center><h1>Without Javascript enabled Twapperlyzer will not work.</h1></center></noscript>
   </div>
 
   <!-- JavaScript at the bottom for fast page loading -->
 
-<script type="text/javascript" src="js/libs/jquery-1.6.1.min.js"></script>
+  <script type="text/javascript" src="js/libs/jquery-1.6.4.min.js"></script>
   <!-- scripts concatenated and minified via ant build script-->
   <script type="text/javascript" src="js/mylibs/handlebars.1.0.0.beta.3.js"></script> 
   <script src="js/mylibs/leaflet-0.2.1.min.js"></script> 
   <script src="js/mylibs/underscore-min.js"></script>
-  <script src="js/mylibs/helper.js"></script> 
-  <script src="js/plugins.js"></script> 
-  <script src="js/helper.js"></script> 
-  <script src="js/visualisations.js"></script> 
-  <script src="js/script.js"></script> 
+  <script type="text/javascript" src="js/mylibs/jquery.timeago.js"></script> 
   <script type="text/javascript" src="js/mylibs/highcharts.js"></script>
   <script type="text/javascript" src="js/mylibs/themes/grid.js"></script>
   <script type="text/javascript" src="js/mylibs/modules/exporting.js"></script>
@@ -73,13 +69,19 @@
   <script type="text/javascript" src="js/mylibs/lawnchair-0.6.1.min.js"></script> 
   <script type="text/javascript" src="js/mylibs/jquery.couch.js"></script> 
   <script type="text/javascript" src="js/mylibs/twapperlyzerApi.js"></script> 
-  <script type="text/javascript" src="js/mylibs/jquery.mobile-1.0b2.js"></script> 
+  <script type="text/javascript" src="js/mylibs/jquery.mobile-1.0b3.min.js"></script> 
+  <script src="js/mylibs/helper.js"></script> 
+  <script src="js/plugins.js"></script> 
+  <script src="js/helper.js"></script> 
+  <script src="js/visualisations.js"></script> 
+  <script src="js/script.js"></script> 
 
   <script type="text/javascript" src="js/mylibs/jquery.mobile.simpledialog.min.js"></script>
   <!-- end concatenated and minified scripts-->
   <!--<script type="text/javascript" src="js/mylibs/jquery.mobile.datebox-1.0b1.min.js"></script>-->
 
   <script>
+    $.mobile.pushStateEnabled = false;
     // iPhone Scale Bug Fix, read this when using http://www.blog.highub.com/mobile-2/a-fix-for-iphone-viewport-scale-bug/
     MBP.scaleFix();
     
@@ -134,11 +136,11 @@
 
 <!--CONTENT -->
 <script id="simpleContent" type="text/html">
-  <div data-role="content" id="{{containerId}}", style="{{style}}"></div>
+  <div data-role="content" class="bg" id="{{containerId}}", style="{{style}}"></div>
 </script>
 
 <script id="blockListContent" type="text/html">
-  <div data-role="content">
+  <div data-role="content" class="bg">
   <div id={{blockId}}  style="{{style}}"></div>
   <h2 class="center-wrapper" >{{listHeader}}</h2>
   <ul data-role="listview" data-filter="true" data-inset="true" id="{{listId}}" orderType="" >
@@ -148,7 +150,7 @@
 
 
 <script id="optionsContent" type="text/html">
-  <div data-role="content">
+  <div data-role="content" class="bg">
       <form id="optionsForm" action="#" method="get">
         
         <div data-role="fieldcontain">
@@ -182,7 +184,7 @@
 </script>
 
 <script id="listContent" type="text/html">
-  <div data-role="content">
+  <div data-role="content" class="bg">
     <ul data-role="listview" data-filter="true" id="{{listId}}" orderType="" >
     
     </ul>
@@ -190,22 +192,15 @@
 </script>
 
 <script id="archivePageContent" type="text/html">
-  <div data-role="content">
-  
-    <div class = "ui-bar ui-bar-e" id="archieInfo-{{archive._id}}">
+  <div data-role="content" class="bg">
+    <div class = "ui-bar-b ui-corner-top ui-corner-bottom ui-shadow" id="archieInfo-{{archive._id}}">
       <center>
         <p>{{archive.archive_info.description}}</p>
-        <p>"{{formatEpochTime archive.archive_info.create_time}}"</p>
-        <p>total number of tweets = <strong id="currentArchiveCount-{{archive._id}}">{{archive.archive_info.count}}</strong></p>
+        <p>Collecting since {{formatEpochTime archive.archive_info.create_time}}</p>
+        <p>Total number of tweets = <strong id="currentArchiveCount-{{archive._id}}">{{archive.archive_info.count}}</strong></p>
+        <p id="analyseProgress-{{archive._id}}">updating archive <progress  ></progress></p>
       </center>
-
     </div>
-    <!--
-    <div data-role="fieldcontain" id="downloadSliderBox">
-	    <label for="downloadSlider">Analyse Status:</label>
- 	    <input type="range" name="slider" id="downloadSlider" value="0" min="0" max="100"  />
-    </div>
-    -->
     {{>widgetList}}
   </div>
 </script>
@@ -224,29 +219,61 @@
 </script>
 
 <script id="widgetListTemplate" type="text/html">
+  
     <ul data-role="listview" data-inset="true" id="archiveWidgetsList-{{archive._id}}">
-      <li><a href="#showMsgsPage-{{archive._id}}"> Browse Messages</a><span class="ui-li-count">{{archive.messagesSoFar}}</span></li>
-      <li><a href="#mapPage-{{archive._id}}"> Show Taged messages on the Map</a><span class="ui-li-count">{{archive.geoMarker.length}}</span></li>
-      <li><a href="#archiveLinksPage-{{archive._id}}"> Show the Links </a><span class="ui-li-count">{{archive.urls.length}}</span></li>
-      <li><a href="#archiveHashtagsPage-{{archive._id}}"> Show the Hashtags </a><span  class="ui-li-count">{{archive.hashtags.length}}</span></li>
-      <li><a href="#archiveMentionsPage-{{archive._id}}"> Show the Mentions </a><span  class="ui-li-count">{{archive.mentions.length}}</span></li>
-      <li><a href="#archiveMembersPage-{{archive._id}}"> Members </a><span  class="ui-li-count">{{archive.users.length}}</span></li>    
+      <li data-role="list-divider"> Contend </li>
+      <li>
+        <a href="#archiveHashtagsPage-{{archive._id}}"> 
+        <h3>Hashtags</h3> 
+        <p>Show all hashtags used in this archive </p> 
+        </a>
+      </li>
+      <li>
+        <a href="#archiveLinksPage-{{archive._id}}"> 
+        <h3>Urls</h3>
+        <p> Shows the expanded urls</p>
+        </a>
+      </li>
+      <li>
+        <a href="#showMsgsPage-{{archive._id}}">
+          <h3>Messages</h3>
+          <p>Browse the messages in anti-chronologic order</p>
+        </a>
+      </li>
+        
+      <li data-role="list-divider"> Member </li>
+      <li>
+        <a href="#archiveMentionsPage-{{archive._id}}"> 
+        <h3>Mentions</h3> 
+        <p>Show the user mentioned in this archive </p>
+        </a>
+      </li>
+      <!-- <li><a href="#archiveMembersPage-{{archive._id}}"> Show the Kuchen </a></li> -->
+
+      <li data-role="list-divider"> Geo Informations </li>
+      <li>
+        <a href="#mapPage-{{archive._id}}" >
+          <h3>Map</h3> 
+          <p>Show Geo tagged messages on a map</p>
+        </a>
+      </li>
     </ul>
 </script>
 
     <!-- entry.profile_image_url.replace("normal","bigger") -->
 <script id="msgEntryTemplate" type="text/html">
   <li>
-
-    <img src="{{profile_image_url}}"  alt="Avatar {{from_user}}" >
-    <h3>{{from_user}}</h3>
+    <span class="rounded-img2" style="background: url({{profile_image_url}}) no-repeat center center; width: 48px; height: 48px;">
+      <img src="{{profile_image_url}}" style="opacity: 0;" alt="Avatar {{from_user}}"/> 
+    </span> 
+    <h3 >{{from_user}}</h3>
     <p>
       <strong>{{{htmlLinksForText text}}}</strong>
     </p>
     <p>{{created_at}} Tweet id <a href="http://twitter.com/#!/{{from_user}}/status/{{id}}" target=\"_blank\">{{id}}}</a></p>
     {{#if geo_coordinates_0}}
     <p>
-      <a href = "#mapPage-{{laid}}" msgid="{{msgid}}">
+      <a href = "#mapPageForSingleUser?msgid={{msgid}}">
         geo info:{{geo_type}} - lat = {{geo_coordinates_0}} - long = {{geo_coordinates_1}}
       </a>
     </p>
@@ -272,19 +299,24 @@
 </script>
 
 <script id="aboutContent" type="text/html">
-<p>This project was created at the <a href="http://ddi.uni-paderborn.de/en" target="_blank" >DDI</a> 
-of the <a href="http://www.uni-paderborn.de/en/" target="_blank" >University of Paderborn</a>. 
-The aim is to anlayse <a href="http://twitter.com" target="_blank" >Twitter</a> messages 
-archived by a instance of <a href="http://code.google.com/p/yourtwapperkeeper/" target="_blank" >YourTwapperkeeper</a>.
-</p>
-<p> It is split into two functional modules the dataprovider and the viewer. </p>
-<ul>
-  <li>The dataprovider downloads the messages from a YourTwapperkeeper 
-  instance and gather additional information from other sources. Afterwards it aggregate 
-  the data and save it into a <a href="http://couchdb.org" target="_blank" >couchDB</a> instance. More information about the dataprovider you find at the <a href="http://{{dataproviderUrl}}" target="_blank" >API documentation</a></li> 
-  <li>The viewer is a <a href="http://couchapp.org" target="_blank" >couchapp</a> that allow you to replicate to your own Couchdb. This enables you to view all analysis that don't require additional data from the Internet</li>
-</ul>  
-<p> For this twapperkeeper instance is <a href="mailto:{{adminEmail}}?subject=twapperlyzer%20request">{{adminName}}</a> responsible. 
+<div data-role="content" class="bg" >
+  <div class="center-wrapper"> <img src="img/logo3-withAspect.svg" alt="logo" ></div>
+
+  <p>This project was created at the <a href="http://ddi.uni-paderborn.de/en" target="_blank" >DDI</a> 
+  of the <a href="http://www.uni-paderborn.de/en/" target="_blank" >University of Paderborn</a>. 
+  The aim is to anlayse <a href="http://twitter.com" target="_blank" >Twitter</a> messages 
+  archived by a instance of <a href="http://code.google.com/p/yourtwapperkeeper/" target="_blank" >YourTwapperkeeper</a>.
+  </p>
+  <p> It is split into two functional modules the dataprovider and the viewer. </p>
+  <ul>
+    <li>The dataprovider downloads the messages from a YourTwapperkeeper 
+    instance and gather additional information from other sources. Afterwards it aggregate 
+    the data and save it into a <a href="http://couchdb.org" target="_blank" >couchDB</a> instance. More information about the dataprovider you find at the <a href="http://{{dataproviderUrl}}" target="_blank" >API documentation</a></li> 
+    <li>The viewer is a <a href="http://couchapp.org" target="_blank" >couchapp</a> that allow you to replicate to your own Couchdb. This enables you to view all analysis that don't require additional data from the Internet</li>
+  </ul>  
+  <p> For this twapperkeeper instance is <a href="mailto:{{adminEmail}}?subject=twapperlyzer%20request">{{adminName}}</a> responsible.
+</div> 
+
 </script>
 
 

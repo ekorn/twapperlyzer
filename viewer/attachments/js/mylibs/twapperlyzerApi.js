@@ -82,7 +82,10 @@
 			}
 		});
 	}
-	twapperlyzerApi.analyseArchive = function (selectedArchive, dbconfig, dataprovider, callback) {
+	twapperlyzerApi.analyseArchive = function (selectedArchive, dbconfig, dataprovider, mention, callback) {
+    if(mention !== "")
+      dbconfig.mention = mention;
+      
 		twapperlizerCall(selectedArchive, dbconfig, dataprovider, "analyseArchive", callback);
 	};
 	twapperlyzerApi.updateArchive = function (selectedArchive, dbconfig, dataprovider, callback) {

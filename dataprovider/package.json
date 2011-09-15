@@ -18,8 +18,10 @@
     , "request": ">=1.9.5"  
     , "underscore": ">=1.1.7" 
     , "underscore.string": ">=1.1.5" 
-    , "unshortener": ">=0.0.8"
+    , "url-expander": ">=0.0.10"
     , "glossary": ">=0.1.0"
     , "restler": ">=0.2.1"
+    , "languagedetect": ">=0.0.1"
+    , "glossary": ">=0.1.1"
   }
 }

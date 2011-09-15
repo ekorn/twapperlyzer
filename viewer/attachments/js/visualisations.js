@@ -73,6 +73,7 @@ function addUrlChart(containerId, urls, showLimit) {
 function setUpGeoMarkerForArchive(data, mapContainerId) {
 
 	setUpMap(mapContainerId);
+
 	map.setView(new L.LatLng(51.719444, 8.757222, true), 2);
 	var ColorMarker = L.Icon.extend({
 		iconUrl: '',
@@ -88,22 +89,22 @@ function setUpGeoMarkerForArchive(data, mapContainerId) {
 		// create a marker in the given location and add it to the map
 		var marker;
 		var text = "";
-		var pos = new L.LatLng(geoM.lat, geoM.long, true);
+		var pos = new L.LatLng(geoM.lat, geoM.lon, true);
 		//One Message at one place, from one person;
 		if(geoM.users.length === 1 && geoM.users[0].tweets.length === 1) {
 			marker = new L.Marker(pos);
-			text +="<a href=\"http://twitter.com/#!/"+geoM.users[0].name+"/status/"+geoM.users[0].tweets[0].id+"\" target=\"_blank\" >"+geoM.users[0].name+"</a>";
-			//console.log("Simple Marker please",_.values(geoM.messages));
+			text +="<a href=\"http://twitter.com/#!/"+geoM.users[0].text+"/status/"+geoM.users[0].tweets[0].id+"\" target=\"_blank\" >"+geoM.users[0].text+"</a>";
+			//console.log("Simple Marker please",_.values(geoM.users));
 		} else if(geoM.users.length == 1) {
 			marker = new L.Marker(pos);
-			text +=" <a href=\"http://twitter.com/#!/"+geoM.users[0].name+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[0].tweets.length,9)+"em;\">"+geoM.users[0].name+"</a> ";
-			//console.log("Simple Marker please",_.values(geoM.messages));
+			text +=" <a href=\"http://twitter.com/#!/"+geoM.users[0].text+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[0].tweets.length,9)+"em;\">"+geoM.users[0].text+"</a> ";
+			//console.log("Simple Marker please",_.values(geoM.users));
 		} else {
 			marker = new L.Marker(pos, {
 				icon:redMarker
 			});
 			for (var k = 0; k < geoM.users.length; k++) {
-				text +=" <a href=\"http://twitter.com/#!/"+geoM.users[k].name+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[k].tweets.length,9)+"em;\">"+geoM.users[k].name+"</a> ";
+				text +=" <a href=\"http://twitter.com/#!/"+geoM.users[k].text+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[k].tweets.length,9)+"em;\">"+geoM.users[k].text+"</a> ";
 			}
 		}
 		marker.bindPopup(text, {
