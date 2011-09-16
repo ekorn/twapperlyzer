@@ -95,7 +95,7 @@
   </script>
   
 <script id="page" type="text/html">
-  <div data-role="page" id="{{pageId}}" data-url="{{pageId}}" >
+  <div data-role="page" class= " bg "  id="{{pageId}}" data-url="{{pageId}}" >
     {{> header}}
     {{> content}}
     {{> footer}}
@@ -103,7 +103,7 @@
 </script>
 
 <script id="dialogPage" type="text/html">
-<div data-role="page" id = "{{dialogPageId}}" data-url="{{dialogPageId}}>
+<div data-role="page"  id = "{{dialogPageId}}" data-url="{{dialogPageId}}>
   <div data-role="header" data-position="inline">
     <h1>{{dialogHeader}}</h1>
   </div>
@@ -136,11 +136,11 @@
 
 <!--CONTENT -->
 <script id="simpleContent" type="text/html">
-  <div data-role="content" class="bg" id="{{containerId}}", style="{{style}}"></div>
+  <div data-role="content"  id="{{containerId}}", style="{{style}}"></div>
 </script>
 
 <script id="blockListContent" type="text/html">
-  <div data-role="content" class="bg">
+  <div data-role="content" >
   <div id={{blockId}}  style="{{style}}"></div>
   <h2 class="center-wrapper" >{{listHeader}}</h2>
   <ul data-role="listview" data-filter="true" data-inset="true" id="{{listId}}" orderType="" >
@@ -150,7 +150,7 @@
 
 
 <script id="optionsContent" type="text/html">
-  <div data-role="content" class="bg">
+  <div data-role="content" >
       <form id="optionsForm" action="#" method="get">
         
         <div data-role="fieldcontain">
@@ -184,7 +184,7 @@
 </script>
 
 <script id="listContent" type="text/html">
-  <div data-role="content" class="bg">
+  <div data-role="content" >
     <ul data-role="listview" data-filter="true" id="{{listId}}" orderType="" >
     
     </ul>
@@ -192,11 +192,11 @@
 </script>
 
 <script id="archivePageContent" type="text/html">
-  <div data-role="content" class="bg">
+  <div data-role="content" >
     <div class = "ui-bar-b ui-corner-top ui-corner-bottom ui-shadow" id="archieInfo-{{archive._id}}">
       <center>
         <p>{{archive.archive_info.description}}</p>
-        <p>Collecting since {{formatEpochTime archive.archive_info.create_time}}</p>
+        <p>Collecting since {{formatEpochTimeToFuzzy archive.archive_info.create_time}}</p>
         <p>Total number of tweets = <strong id="currentArchiveCount-{{archive._id}}">{{archive.archive_info.count}}</strong></p>
         <p id="analyseProgress-{{archive._id}}">updating archive <progress  ></progress></p>
       </center>
@@ -248,7 +248,13 @@
         <p>Show the user mentioned in this archive </p>
         </a>
       </li>
-      <!-- <li><a href="#archiveMembersPage-{{archive._id}}"> Show the Kuchen </a></li> -->
+      <li>
+        <a href="#archiveQuestionsPage-{{archive._id}}?type=goodAnswered"> 
+        <h3>Questions</h3> 
+        <p>Questions raised in this community</p>
+        </a>
+      </li>
+      <li><a href="#archiveMembersPage-{{archive._id}}"> Placeholder </a></li>
 
       <li data-role="list-divider"> Geo Informations </li>
       <li>
@@ -263,14 +269,7 @@
     <!-- entry.profile_image_url.replace("normal","bigger") -->
 <script id="msgEntryTemplate" type="text/html">
   <li>
-    <span class="rounded-img2" style="background: url({{profile_image_url}}) no-repeat center center; width: 48px; height: 48px;">
-      <img src="{{profile_image_url}}" style="opacity: 0;" alt="Avatar {{from_user}}"/> 
-    </span> 
-    <h3 >{{from_user}}</h3>
-    <p>
-      <strong>{{{htmlLinksForText text}}}</strong>
-    </p>
-    <p>{{created_at}} Tweet id <a href="http://twitter.com/#!/{{from_user}}/status/{{id}}" target=\"_blank\">{{id}}}</a></p>
+    {{> message}}
     {{#if geo_coordinates_0}}
     <p>
       <a href = "#mapPageForSingleUser?msgid={{msgid}}">
@@ -281,6 +280,44 @@
   </li>
 </script>
 
+<script id="QuestionsWithAnswers" type="text/html">
+  <div>
+    {{> message}}
+  </div>
+  {{#each answers}}
+  <div style=" margin-left: 20px;">
+    {{> message}}
+  </div>
+  {{/each}}
+  <hr />
+</script>
+
+<script id="messageElement2" type="text/html">
+  <h3 >{{from_user}}</h3>
+  <div style="float: left; margin-right: 10px;">
+    <span class="rounded-img2" style="background: url({{profile_image_url}}) no-repeat center center; width: 48px; height: 48px;">
+      <img src="{{profile_image_url}}" style="opacity: 0;" alt="Avatar {{from_user}}"/> 
+    </span> 
+  </div>
+  <div>
+    <p><strong>{{{htmlLinksForText text}}}</strong><br>
+      {{formatEpochTime time}} Tweet id <a href="http://twitter.com/#!/{{from_user}}/status/{{id}}" target=\"_blank\">{{id}}}</a>
+    </p>
+  </div>
+</script>
+
+<script id="messageElement" type="text/html">
+    <h3 >{{from_user}}</h3>
+    <div style="float: left; margin-right: 10px;">
+      <span class="rounded-img2" style="background: url({{profile_image_url}}) no-repeat center center; width: 48px; height: 48px;">
+        <img src="{{profile_image_url}}" style="opacity: 0;" alt="Avatar {{from_user}}"/> 
+      </span> 
+    </div>
+    <div><p>&nbsp;</p></div>
+    <p><strong>{{{htmlLinksForText text}}}</strong><br>
+      {{formatEpochTime time}} Tweet id <a href="http://twitter.com/#!/{{from_user}}/status/{{id}}" target=\"_blank\">{{id}}}</a>
+    </p>
+</script>
 <script id="simpleList" type="text/html">
   {{#each entry}}
   <li>
@@ -299,7 +336,7 @@
 </script>
 
 <script id="aboutContent" type="text/html">
-<div data-role="content" class="bg" >
+<div data-role="content" >
   <div class="center-wrapper"> <img src="img/logo3-withAspect.svg" alt="logo" ></div>
 
   <p>This project was created at the <a href="http://ddi.uni-paderborn.de/en" target="_blank" >DDI</a> 
@@ -339,6 +376,16 @@
   </div>
 </script>
 
+<script id="navbarSingleButtonFooter" type="text/html">
+  <div data-role="footer">
+    <div data-role="navbar">
+      <ul>
+        <li><a href="{{target}}" >{{footerButtonText}}</a></li>
+      </ul>
+    </div><!-- /navbar -->
+  </div><!-- /footer -->
+</script>
+
 <script id="navbarArchiveListFooter" class="nav-archive-list" type="text/html">
   <div data-role="footer" class="nav-archive-list" data-position="fixed">
     <div data-role="navbar" id="{{navbarId}}">
@@ -360,6 +407,20 @@
         <li><a href="#" onclick='' >Mentions</a></li>
         <li><a href="#" onclick='getRTInfo()' >RT</a></li>
         <li><a href="#" onclick='getQuestionerInfo()' >Questioner</a></li>
+      </ul>
+    </div><!-- /navbar -->
+  </div><!-- /footer -->
+</script>
+
+<script id="navbarQuestionsFooter"  type="text/html">
+  <div data-role="footer"  data-position="fixed">
+    <div data-role="navbar" >
+      <ul>
+        <li><a href="#{{pageId}}?type=goodAnswered" >Good Answered </a></li>
+        <li><a href="#{{pageId}}?type=allAnswered" >All Answered</a></li>
+        <li><a href="#{{pageId}}?type=unanswered"  >Unanswered</a></li>
+        <li><a href="#{{pageId}}?type=responder"  >Responder</a></li>
+        <li><a href="#{{pageId}}?type=questioner" >Questioner</a></li>
       </ul>
     </div><!-- /navbar -->
   </div><!-- /footer -->

@@ -95,11 +95,11 @@ function setUpGeoMarkerForArchive(data, mapContainerId) {
 			marker = new L.Marker(pos);
 			text +="<a href=\"http://twitter.com/#!/"+geoM.users[0].text+"/status/"+geoM.users[0].tweets[0].id+"\" target=\"_blank\" >"+geoM.users[0].text+"</a>";
 			//console.log("Simple Marker please",_.values(geoM.users));
-		} else if(geoM.users.length == 1) {
+		} else if(geoM.users.length == 1) {//More than one message from one place and person.
 			marker = new L.Marker(pos);
 			text +=" <a href=\"http://twitter.com/#!/"+geoM.users[0].text+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[0].tweets.length,9)+"em;\">"+geoM.users[0].text+"</a> ";
 			//console.log("Simple Marker please",_.values(geoM.users));
-		} else {
+		} else {//More than one Person at one place, the amount of messages is irrelevant 
 			marker = new L.Marker(pos, {
 				icon:redMarker
 			});

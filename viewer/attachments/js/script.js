@@ -74,7 +74,7 @@ $(document).bind( "pagebeforechange", function( e, data ) {
       if(toPageParts === null){ //it is not a standard url with a laid
         target = $(data.toPage); 
         if(target.length === 0){//its not in the DOM
-          $.mobile.changePage($('#listArchivesPage'), data.options); //so I can't load it so redirect 
+          $.mobile.changePage($('#listArchivesPage'), data.options); //I can't load it so redirect 
         }
       }else{//it is a standard url 
         target = $(data.toPage); 
@@ -89,8 +89,13 @@ $(document).bind( "pagebeforechange", function( e, data ) {
             }
           });
         }else{ //it is in the DOM 
-        
-        console.log("nothing to do just let it path to",data.toPage);
+          //It has parameter but since we stay on the same page no event is triggered, so it have to be handled manually.
+          if(params.length === 2 && $.mobile.activePage.attr("id") === data.toPage.substring(1)){
+            document.location.hash = "#"+data.options.dataUrl.split("#")[1];
+            queryHander(data.toPage);
+          }else{
+            console.log($.mobile.activePage.attr("id")," from, nothing to do just let it path to",data.toPage);
+          }
         }
       }
 	}
@@ -174,7 +179,7 @@ function createDialog(text, callback){
 }
 
 function dbReady(info){
-  
+  //console.log("DB info",info);
   //Loading the different configs
   mydb.openDoc("config",  
     {success: 
@@ -330,8 +335,11 @@ function setUpChangesFeed(){
 function createPages(){
 
   //Helper Functions
-  Handlebars.registerHelper("formatEpochTime", function(time){
+  Handlebars.registerHelper("formatEpochTimeToFuzzy", function(time){
     return jQuery.timeago(new Date(time*1000));//It is in Epoch time, so sec not milisec
+  });
+  Handlebars.registerHelper("formatEpochTime", function(time){
+    return new Date(time*1000);//It is in Epoch time, so sec not milisec
   });
   Handlebars.registerHelper("htmlLinksForText", getHTMLLinksForText);
   Handlebars.registerHelper("formatNumber", formatNumber);
@@ -347,14 +355,22 @@ function createPages(){
   twapperSession.templates.blockListContent = Handlebars.compile( $("#blockListContent").html() );
   twapperSession.templates.listContent = Handlebars.compile( $("#listContent").html() );
   twapperSession.templates.archivePageContent = Handlebars.compile( $("#archivePageContent").html() );
+  
   twapperSession.templates.widgetListTemplate = Handlebars.compile( $("#widgetListTemplate").html() );
   twapperSession.templates.archiveListElements = Handlebars.compile( $("#archiveListElements").html());
+  twapperSession.templates.messageElement = Handlebars.compile( $("#messageElement").html());
+  twapperSession.templates.messageElement2 = Handlebars.compile( $("#messageElement2").html());
+  
+  twapperSession.templates.QuestionsWithAnswers = Handlebars.compile( $("#QuestionsWithAnswers").html());
+  
   twapperSession.templates.simpleFooter = Handlebars.compile( $("#simpleFooter").html() );
   twapperSession.templates.buttonFooter = Handlebars.compile( $("#buttonFooter").html() );
   twapperSession.templates.buttonLinkFooter = Handlebars.compile( $("#buttonLinkFooter").html() );
   
   twapperSession.templates.navbarArchiveListFooter = Handlebars.compile( $("#navbarArchiveListFooter").html() );
   twapperSession.templates.navbarMemberFooter = Handlebars.compile( $("#navbarMemberFooter").html() );
+  twapperSession.templates.navbarQuestionsFooter = Handlebars.compile( $("#navbarQuestionsFooter").html() );
+  twapperSession.templates.navbarSingleButtonFooter = Handlebars.compile( $("#navbarSingleButtonFooter").html() );
 
   
   //Elements
@@ -364,7 +380,7 @@ function createPages(){
   
   Handlebars.registerPartial('header', $("#optionsHeader").html());
   Handlebars.registerPartial('content', $("#optionsContent").html());
-  Handlebars.registerPartial('footer', twapperSession.templates.buttonLinkFooter);
+  Handlebars.registerPartial('footer', twapperSession.templates.navbarSingleButtonFooter);
 
   //Options Page
   var optionsPage = {
@@ -448,7 +464,7 @@ function loadUserConfig(callback){
             twapperSession.archiveList.push(listEntry);
           });
 
-          $('#listRemoteArchivesButton .ui-btn-text').text("List archives from YourTwapperkeeper ("+twapperSession.archiveList.length+")");
+          //$('#listRemoteArchivesButton .ui-btn-text').text("List archives from YourTwapperkeeper ("+twapperSession.archiveList.length+")");
           $('#ytkURLField').val(userOptions.ytkUrl);
           $('#dataProviderField').val(userOptions.dataprovider);
           callback(null, true);
@@ -704,7 +720,7 @@ function createArchivePage(requestedLaid, callback){
             twapperSession.selectedArchive = createSelectedArchiveObject([id,l]);
 
             var timeForAnalyse = new Date();
-            timeForAnalyse.setTime(timeForAnalyse.getTime() + (twapperSession.selectedArchive.entry.count*200));
+            timeForAnalyse.setTime(timeForAnalyse.getTime() + (twapperSession.selectedArchive.entry.count*350));
             createDialog("Analysing this archive will take about "+jQuery.timeago(timeForAnalyse)+".<br> Twapperlyzer will send a tweet when it is done, do you want to be mentioned? Than enter your twitter username", function(username){
               if(username !== false ){
                 if(username.length >14){
@@ -907,6 +923,37 @@ function setData(data,callback){
       }
     });
     
+    //archiveQuestionsPage
+    Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+    Handlebars.registerPartial('footer', twapperSession.templates.navbarQuestionsFooter);
+    
+    var questionsPage = {
+    "pageId":"archiveQuestionsPage-"+laid, 
+    "pageHeader":"Questions", 
+    "containerId":"archiveQuestionsContainer-"+laid,
+    "style":""
+    };
+    $.mobile.pageContainer.append(twapperSession.templates.page(questionsPage));
+    $("#archiveQuestionsPage-"+laid).page();
+
+    $("#archiveQuestionsPage-"+laid).live('pagebeforeshow', function(){
+      if(_.isUndefined(twapperSession.archives[laid].questions)){
+        $.getJSON(showUrl(laid),{"type":"stats"}, function(data) {//This has to be done once and will not be overwritten
+          twapperSession.archives[laid].questions = {"stats":data};
+          $("#archiveQuestionsPage-"+laid).find( "h1" ).text(twapperSession.archives[laid].questions.stats.total+" Questions");
+          var footer = $("#archiveQuestionsPage-"+laid).find( ":jqmData(role=navbar) .ui-btn-text" );
+          $(footer[0]).text(twapperSession.archives[laid].questions.stats.goodAnswered+" Good Answered");
+          $(footer[1]).text(twapperSession.archives[laid].questions.stats.allAnswered+" All Answered");
+          $(footer[2]).text(twapperSession.archives[laid].questions.stats.unanswered+" Unanswered");
+          $(footer[3]).text(twapperSession.archives[laid].questions.stats.responder+" Responder");
+          $(footer[4]).text(twapperSession.archives[laid].questions.stats.questioner+" Questioner");
+          queryHander ("#archiveQuestionsPage-"+laid);
+        });
+      }
+    });
+    
+
+    
     //END off overfilling the DOM
   }else{
     console.log("Update....");//FIXME
@@ -919,11 +966,111 @@ function setData(data,callback){
   callback("#page-"+data._id);
 }
 
+function queryHander (page){
+  pageParts = page.split("-");
+  //console.log("WHAT now", page, pageParts);
+  switch(pageParts[0]){
+    case "#archiveQuestionsPage" :
+      if(!_.isUndefined($_GET.type)){
+        getType($_GET.type, pageParts[1]+"-"+pageParts[2]);
+      }
+    break;
+  }
+}
+
+    function getType(type,laid){
+      switch(type){
+        case "goodAnswered" :
+        if(_.isUndefined(twapperSession.archives[laid].questions.goodAnswered)){
+          $.getJSON(showUrl(laid),{"type":"goodAnswered"}, function(data) {
+            twapperSession.archives[laid].questions.goodAnswered = data;
+            setQuestions(twapperSession.archives[laid].questions.goodAnswered,laid);
+          });
+        }else{
+        setQuestions(twapperSession.archives[laid].questions.goodAnswered,laid);
+        }
+        break;
+        case "allAnswered" :
+        if(_.isUndefined(twapperSession.archives[laid].questions.allAnswered)){
+          $.getJSON(showUrl(laid),{"type":"allAnswered"}, function(data) {
+            twapperSession.archives[laid].questions.allAnswered = data;
+            setQuestions(twapperSession.archives[laid].questions.allAnswered,laid);
+          });
+        }else{
+        setQuestions(twapperSession.archives[laid].questions.allAnswered,laid);
+        }
+        break;
+        case "unanswered" :
+        if(_.isUndefined(twapperSession.archives[laid].questions.unanswered)){
+          $.getJSON(showUrl(laid),{"type":"unanswered"}, function(data) {
+            twapperSession.archives[laid].questions.unanswered = data;
+            setQuestions(twapperSession.archives[laid].questions.unanswered,laid);
+          });
+        }else{
+          setQuestions(twapperSession.archives[laid].questions.unanswered,laid);
+        }
+        break;
+        case "responder" :
+        if(_.isUndefined(twapperSession.archives[laid].questions.responder)){
+          $.getJSON(showUrl(laid),{"type":"responder"}, function(data) {
+            twapperSession.archives[laid].questions.responder = data;
+            setSimpleList(twapperSession.archives[laid].questions.responder, $("#archiveQuestionsContainer-"+laid) , laid);
+          });
+        }else{
+          setSimpleList(twapperSession.archives[laid].questions.responder, $("#archiveQuestionsContainer-"+laid) , laid);
+        }
+        break;
+        case "questioner" :
+        if(_.isUndefined(twapperSession.archives[laid].questions.questioner)){
+          $.getJSON(showUrl(laid),{"type":"questioner"}, function(data) {
+            twapperSession.archives[laid].questions.questioner = data;
+            setSimpleList(twapperSession.archives[laid].questions.questioner, $("#archiveQuestionsContainer-"+laid) , laid);
+          });
+        }else{
+          setSimpleList(twapperSession.archives[laid].questions.questioner, $("#archiveQuestionsContainer-"+laid) , laid);
+        }
+        break;
+        default:
+        if(_.isUndefined(twapperSession.archives[laid].questions.goodAnswered)){
+          $.getJSON(showUrl(laid),{"type":"goodAnswered"}, function(data) {
+            twapperSession.archives[laid].questions.goodAnswered = data;
+            setQuestions(twapperSession.archives[laid].questions.goodAnswered,laid);
+          });
+        }else{
+          setQuestions(twapperSession.archives[laid].questions.goodAnswered,laid);
+        }
+      } 
+    }
+    
+    function setQuestions(questions, laid){
+      $("#archiveQuestionsContainer-"+laid).empty();
+      _.each(questions, function(question){
+        Handlebars.registerPartial('message', twapperSession.templates.messageElement2);
+        $("#archiveQuestionsContainer-"+laid).append(twapperSession.templates.QuestionsWithAnswers(question));
+      });
+    }
+
+    function setSimpleList(data, container , laid){
+      container.empty();
+      var first10p = Math.floor((10*(data.length/100)));
+
+      var listData = {};
+      //listData.entry = _.first(data, Math.min(first10p, userOptions.showLimit));
+      listData.entry = data;
+      container.empty();
+      container.append(twapperSession.templates.listContent({"listId":"simpleList-"+laid}));
+      container = container.find( "ul" );
+      container.append(twapperSession.templates.simpleList(listData));
+      container.listview();
+    }
 /**
  * Show Archive Page:
  *
  */
 
+function showUrl(laid){
+  return mydb.uri+"/_design/twapperlyzer/_show/questions/"+laid+"-qu"
+}
 function getRTInfo(){
   var laid = getLaidFromPageName();
   var container = $("#archiveMembersContainer-"+laid);
@@ -1004,6 +1151,7 @@ function loadMessagesFromServer(){
         if(entry.geo_coordinates_0 === "0"){
           entry.geo_coordinates_0 = false;
         }
+        Handlebars.registerPartial('message', twapperSession.templates.messageElement);
         msgList.append(twapperSession.templates.msgEntryTemplate(entry));
       }
       

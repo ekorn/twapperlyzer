@@ -278,42 +278,89 @@ function analyseAndUpdate(archiveInfo, currentDB, request, response){
     if (err) throw err;
     db.save(analysePart._id, analysePart, function (err, res) {
       if (err) {
-        console.log("Error while save ",err);
-        throw err;
-      }
-      if(!_.isUndefined(analysePart.messagesSoFar)){
-        if(analysePart.status === "analysing"){
-          callback(null, "ok")
-          var updating = new helper.ResponseBean();
-          updating.status = "ok";
-          updating.msg = "analysing";
-          updating.id = archiveInfo._id;
-          sendJSON(request, response, updating);
-        }else if(analysePart.status === "done"){
-          db.get("config", function(err, res){
-            var analyseTime = (new Date().getTime()- ptime.getTime());
-            var tweet = "after "+helper.convertMilliseconds(analyseTime).clock+" is #twapperlyzer done with "+analysePart.archive_info.keyword
-            if (res) {
-              tweet+=" see http://"+res.standardUrl+"/#page-"+analysePart._id;
-            }
-            if(exist(request.query.mention) && request.query.mention !== "" ){
-              tweet = "@"+request.query.mention+" "+tweet
-            }
-            if(conf.twapperlyzer.sendTweets === true){
-              oAuth.post("http://api.twitter.com/1/statuses/update.json", conf.twitter.accessToken, 
-              conf.twitter.accessTokenSecret, {"status":tweet}, function(error, data) {
-                if(error) console.log(require('sys').inspect(error));
-              }); 
-            }else{
-              console.log("tweet",tweet);
-            }
-          });
-        }
+        console.log("Error while save ",analysePart, err);
+        db.get(analysePart._id, function (err, doc){
+          if (err) {
+            console.log("Cannot resolve error in get");
+            throw err;
+          }else{
+            var newDoc = mergeDocs(doc, analysePart);
+            db.save(newDoc._id, newDoc, function (err, res) {
+              if (err) {
+                console.log("Cannot resolve error in save");
+                throw err;
+              }else{
+                handleRes();
+              }
+            });
+          }
+        });
       }else{
-        callback(null, "ok")
+         handleRes();
+      }
+
+      function handleRes(){
+        if(!_.isUndefined(analysePart.messagesSoFar)){
+          if(analysePart.status === "analysing"){
+            callback(null, "ok")
+            var updating = new helper.ResponseBean();
+            updating.status = "ok";
+            updating.msg = "analysing";
+            updating.id = archiveInfo._id;
+            sendJSON(request, response, updating);
+          }else if(analysePart.status === "done"){
+            db.get("config", function(err, res){
+              var analyseTime = (new Date().getTime()- ptime.getTime());
+              var tweet = "after "+helper.convertMilliseconds(analyseTime).clock+" is #twapperlyzer done with "+analysePart.archive_info.keyword
+              if (res) {
+                tweet+=" see http://"+res.standardUrl+"/#page-"+analysePart._id;
+              }
+              if(exist(request.query.mention) && request.query.mention !== "" ){
+                tweet = "@"+request.query.mention+" "+tweet
+              }
+              if(conf.twapperlyzer.sendTweets === true){
+                oAuth.post("http://api.twitter.com/1/statuses/update.json", conf.twitter.accessToken, 
+                conf.twitter.accessTokenSecret, {"status":tweet}, function(error, data) {
+                  if(error) console.log(require('sys').inspect(error));
+                }); 
+              }else{
+                console.log("tweet",tweet);
+              }
+            });
+          }
+        }else{
+          callback(null, "ok")
+        }
       }
     });
   });  
+}
+
+function mergeDocs(oldDoc, newDoc){
+  if(oldDoc.type !== "hourData" ){
+    var error = {"error":"cant merge documents with type "+oldDoc.type };
+    throw error;
+  }
+  
+  if(oldDoc.type === "hourData" ){
+    oldDoc.weight += newDoc.weight;
+    oldDoc.rt += newDoc.rt;
+    oldDoc.rt += newDoc.rt;
+    oldDoc.rtu = analyser.aggrigateAggrigatedData(oldDoc.rtu, newDoc.rtu);
+    oldDoc.ht = analyser.aggrigateAggrigatedData(oldDoc.ht, newDoc.ht);
+    oldDoc.un = analyser.aggrigateAggrigatedData(oldDoc.un, newDoc.un);
+    oldDoc.geo = analyser.aggrigateGeo(oldDoc.geo, newDoc.geo);
+    oldDoc.keywords = analyser.aggrigateAggrigatedData(oldDoc.keywords, newDoc.keywords);
+    oldDoc.language = analyser.aggrigateAggrigatedData(oldDoc.language, newDoc.language);
+    oldDoc.me = analyser.aggrigateAggrigatedData(oldDoc.me, newDoc.me);
+    oldDoc.sentiment.positive += newDoc.sentiment.positive;
+    oldDoc.sentiment.neutral += newDoc.sentiment.neutral;
+    oldDoc.sentiment.negative += newDoc.sentiment.negative;
+    oldDoc.urls = analyser.aggrigateAggrigatedData(oldDoc.urls, newDoc.urls);
+    
+    return oldDoc;
+  }
+  
 }
 
 function parameterCheck(req){
@@ -360,6 +407,7 @@ function createBasicArchiveInfo(selectedArchive, archive){
   doc.archive_info = archive.archive_info;
   doc.messagesSoFar = 0;
   doc.timestamp = new Date();
+  doc.type = "meta";
   doc.status = "init";
   doc.isSearch = selectedArchive.isSearch;
   doc.ytkUrl = selectedArchive.ytkUrl;

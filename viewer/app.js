@@ -296,14 +296,6 @@ ddoc.views.language = {
   }
 }
 
-ddoc.views.questions = {
-  map: function(doc) {
-    if(doc.type === "questions"){
-      emit(doc._id, doc);
-    }
-  }
-}
-
 ddoc.views.geo = {
   map: function(doc) {
     if(doc.type === "hourData"){
@@ -336,6 +328,7 @@ ddoc.views.user = {
     }
   }
 }
+
 
 /*
 ddoc.views.male = {
@@ -407,7 +400,75 @@ ddoc.views.reach = {
 
   //
 //http://localhost:5984/twapperlyzer2/_design/twapperlyzer/_view/language?startkey=%221299780000%22&endkey=%221308067200%22&startkey_docid=29863de6315290d576d34e93d122c944-1-1299780000&endkey_docid=29863de6315290d576d34e93d122c944-1-1308067200
+
+ddoc.shows = {};
+
+ddoc.shows.questions = function(doc ,req) {
+  var allAnswered = [];
+  var unanswered = [];
+  var goodAnswered = [];
+  var questioner = [];
+  var responder = [];
+
+  function isIn(data, key) {
+    for(var i=0; i<data.length; i++) {
+      if(data[i].text.toLowerCase() === key.toLowerCase())
+        return i;
+    }
+    return -1;
+  }
   
+  function addToArray(data, key){
+    var pos = isIn(data, key);
+    if(pos !== -1){
+      data[pos].weight++;
+    }else{
+      data.push({"text":key, "weight":1})
+    }
+  }
+  function aggSort(a, b) {
+    return b.weight - a.weight;
+  }
+    
+  doc.questions.forEach(function(question){
+    question.text = question.text.replace(/&quot;/g,'"');
+    addToArray(questioner, question.from_user);
+    delete question.metaData;
+    if(question.answers.length === 0){
+      unanswered.push(question);
+    }else{
+      allAnswered.push(question);
+      var betterAnswers = [];
+      question.answers.forEach(function (anwser){
+        anwser.text = anwser.text.replace(/&quot;/g,'"');
+        addToArray(responder, anwser.from_user);
+        if(anwser.weight > 0.5){
+          betterAnswers.push(anwser)
+        }
+      });
+      if(betterAnswers.length >0){
+        question.answers = betterAnswers;
+        goodAnswered.push(question);
+      }
+    }
+  });
+  
+  if(req.query.type === "allAnswered"){
+    return toJSON(allAnswered);
+  }
+  if(req.query.type === "goodAnswered"){
+    return toJSON(goodAnswered);
+  }else if(req.query.type === "unanswered"){
+    return toJSON(unanswered);
+  }else if(req.query.type === "questioner"){
+    return toJSON(questioner.sort(aggSort));
+  }else if(req.query.type === "responder"){
+    return toJSON(responder.sort(aggSort));
+  }else if(req.query.type === "stats"){
+    return toJSON({"total": doc.questions.length, "allAnswered": allAnswered.length, "goodAnswered":goodAnswered.length, "unanswered": unanswered.length, "questioner":questioner.length, "responder":responder.length});
+  }
+}
+
 
 	ddoc.validate_doc_update = function (newDoc, oldDoc, userCtx) {
 		if (newDoc._deleted === true && userCtx.roles.indexOf('_admin') === -1) {

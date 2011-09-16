@@ -4,6 +4,7 @@ var _ = require('underscore')._;
 _.mixin(require('underscore.string'));
 // expand an URL
 var UrlExpander = require('url-expander');
+var natural = require('natural');
 var names;
 getNamesToGender('./staticData/forenames2.txt', function(namesFromFile){names = namesFromFile});
 var conf = require('config');
@@ -22,7 +23,7 @@ var oneHour = 3600;
 var regExUsernames = /(^|\s)@(\w+)/g;
 var regExHashtags  = /(^|\s)#(\w+)/g;
 var regExUrls = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-
+var doAsync = true;
 var calcLanguage = function(a,b){
   return (a+a+b)/3
 };
@@ -126,12 +127,12 @@ function analyseMesseges(archiveInfo, callback){
     
     //ALL TEXT & Keywords
     if(_.isUndefined(msgForCurrentDate.alltext)){
-      msgForCurrentDate.alltext = ""; 
+      //msgForCurrentDate.alltext = ""; 
       msgForCurrentDate.keywords = []; 
       msgForCurrentDate.language = []; 
     }
     if(!tmpMetaInfo.isReTweet){
-      msgForCurrentDate.alltext+= " "+(message.text);
+      //msgForCurrentDate.alltext+= " "+(message.text);
       var clearedText =  _.strip(keywords.clearText(message.text,  [regExUrls,regExHashtags,regExUsernames]));
       tmpMetaInfo.clearedText = clearedText;
       //Detect the language.
@@ -148,10 +149,10 @@ function analyseMesseges(archiveInfo, callback){
         clearedText = _.strip(keywords.filterStopwords(detectedlanguage, clearedText));
         tmpMetaInfo.clearedText = clearedText;
         //Extract Keywords 
-        words = keywords.extract(clearedText);
+        words = keywords.extract(clearedText,{blacklist: ["RT",]});
         tmpMetaInfo.words = words;
       }else{
-        words = keywords.extract(clearedText);
+        words = keywords.extract(clearedText,{blacklist: ["RT"]});
         tmpMetaInfo.words = words;
       }
 
@@ -194,7 +195,7 @@ function analyseMesseges(archiveInfo, callback){
     }
     
     //Finding answers to Questions
-    if(!tmpMetaInfo.isReTweet || !tmpMetaInfo.isQuestion){// A Retweet could not be answer 
+    if(!tmpMetaInfo.isReTweet){// A Retweet could not be answer 
       _.each(tmpMetaInfo.mentions, function(username){ //For every Mention we look for a Question
           _.each(questionsDoc.questions, function(question){//and get all questions
           
@@ -205,14 +206,14 @@ function analyseMesseges(archiveInfo, callback){
                   if(_.include(question.metaData.mentions, message.from_user)){ //The questioner mentions this person
                     var msgRating = rateAnswer(question, message, tmpMetaInfo, username);
                     if(msgRating>0){
-                      question.answers.push({"text": message.text, "id": message.id, "time": message.time, "user": message.from_user,"profile_image_url": message.profile_image_url, "weight": msgRating});
+                      question.answers.push({"text": message.text, "id": message.id, "time": message.time, "from_user": message.from_user,"profile_image_url": message.profile_image_url, "weight": msgRating});
                       //question.answers.push({"un": message.from_user, "text": message.text, "weight": msgRating, "tmpMetaInfo": tmpMetaInfo});
                     }
                   }
                 }else{ //It is a undirected question.
                   var msgRating = rateAnswer(question, message, tmpMetaInfo, username);
                   if(msgRating>0){
-                    question.answers.push({"text": message.text, "id": message.id, "time": message.time, "user": message.from_user,"profile_image_url": message.profile_image_url, "weight": msgRating});
+                    question.answers.push({"text": message.text, "id": message.id, "time": message.time, "from_user": message.from_user,"profile_image_url": message.profile_image_url, "weight": msgRating});
                     //question.answers.push({"un":message.from_user, "text": message.text, "weight":msgRating, "tmpMetaInfo":tmpMetaInfo});
                   }
                 }
@@ -222,86 +223,103 @@ function analyseMesseges(archiveInfo, callback){
       });
     }
     //Async Part
-    
-    //Sentiment
-    if(_.isUndefined(msgForCurrentDate.sentiment)){
-      msgForCurrentDate.sentiment = {"positive":0,"neutral":0,"negative":0};
-    }
-    msgForCurrentDate.asyncCount++;
-    getSentiment(message.text, tmpMetaInfo.detectedlanguage, function(data, lang){
-      msgForCurrentDate.asyncCount--;
-
-      if(data === "positive" ) msgForCurrentDate.sentiment.positive++;
-      else if(data === "neutral" ) msgForCurrentDate.sentiment.neutral++;
-      else if(data === "negative" ) msgForCurrentDate.sentiment.negative++;
-      
-      if(msgForCurrentDate.asyncCount == 0){
-        delete msgForCurrentDate.asyncCount;
-        saveTheHour(msgForCurrentDate, callback);
+    if(doAsync){
+      //Sentiment
+      if(_.isUndefined(msgForCurrentDate.sentiment)){
+        msgForCurrentDate.sentiment = {"positive":0,"neutral":0,"negative":0};
       }
-      
-    });
-  });
-totalHours = msgByDate.length;
-//Go through the aggregated by hour results
-  _.each(msgByDate, function(msgForCurrentDate){
-    
-    //Expand the Urls for this hour
-    msgForCurrentDate.urls = [];
-    //Try to expand via cache lookup
-    msgForCurrentDate.rawUrls = _.reject(msgForCurrentDate.rawUrls, function(url){
-      if(!_.isUndefined(urlStore[url])){
-        msgForCurrentDate.urls = getDataFromTextToArray([urlStore[url]], msgForCurrentDate.urls);
-        return true;
-      }else
-        return false;
-      });
-    //If urls left make a real expand
-    if(msgForCurrentDate.rawUrls.length >0){
-      //First reduce the amount od urls to look up to the min
-      var unkownUrls = _.uniq(msgForCurrentDate.rawUrls);
-      //Signal that we Do a Async Opration
       msgForCurrentDate.asyncCount++;
-      var expander = new UrlExpander(unkownUrls);
-      // the "expanded" event is emitted once after all urls have been expanded
-      expander.on('expanded', function (originalUrls, expandedUrls) {
+      getSentiment(message.text, tmpMetaInfo.detectedlanguage, function(err, data){
         msgForCurrentDate.asyncCount--;
-        //Extending  the urlStore
-        for(var i = 0; i<originalUrls.length; i++){
-          urlStore[originalUrls[i]] = expandedUrls[i];
-        }
-        //expand the rest via cache lookup
-        _.each(msgForCurrentDate.rawUrls, function(url){
-          msgForCurrentDate.urls = getDataFromTextToArray([urlStore[url]], msgForCurrentDate.urls);
-        });
         
-        //console.log("msgForCurrentDate.urls",msgForCurrentDate.urls, msgForCurrentDate.rawUrls);
-        delete msgForCurrentDate.rawUrls;
+        if(data === "positive" ) msgForCurrentDate.sentiment.positive++;
+        else if(data === "neutral" ) msgForCurrentDate.sentiment.neutral++;
+        else if(data === "negative" ) msgForCurrentDate.sentiment.negative++;
         
         if(msgForCurrentDate.asyncCount == 0){
           delete msgForCurrentDate.asyncCount;
           saveTheHour(msgForCurrentDate, callback);
         }
-
+        
       });
-      expander.expand();
+    }
+  });
+  
+  totalHours = msgByDate.length;
+  //Go through the aggregated by hour results
+  _.each(msgByDate, function(msgForCurrentDate){
+    if(doAsync){
+      //Expand the Urls for this hour
+      msgForCurrentDate.urls = [];
+      //Try to expand via cache lookup
+      msgForCurrentDate.rawUrls = _.reject(msgForCurrentDate.rawUrls, function(url){
+        if(!_.isUndefined(urlStore[url])){
+          msgForCurrentDate.urls = getDataFromTextToArray([urlStore[url]], msgForCurrentDate.urls);
+          return true;
+        }else
+          return false;
+        });
+      //If urls left make a real expand
+      if(msgForCurrentDate.rawUrls.length >0){
+        //First reduce the amount od urls to look up to the min
+        var unkownUrls = _.uniq(msgForCurrentDate.rawUrls);
+        //Signal that we Do a Async Opration
+        msgForCurrentDate.asyncCount++;
+        var expander = new UrlExpander(unkownUrls);
+        // the "expanded" event is emitted once after all urls have been expanded
+        expander.on('expanded', function (originalUrls, expandedUrls) {
+          msgForCurrentDate.asyncCount--;
+          //Extending  the urlStore
+          for(var i = 0; i<originalUrls.length; i++){
+            urlStore[originalUrls[i]] = expandedUrls[i];
+          }
+          //expand the rest via cache lookup
+          _.each(msgForCurrentDate.rawUrls, function(url){
+            msgForCurrentDate.urls = getDataFromTextToArray([urlStore[url]], msgForCurrentDate.urls);
+          });
+          
+          //console.log("msgForCurrentDate.urls",msgForCurrentDate.urls, msgForCurrentDate.rawUrls);
+          delete msgForCurrentDate.rawUrls;
+          
+          if(msgForCurrentDate.asyncCount == 0){
+            delete msgForCurrentDate.asyncCount;
+            saveTheHour(msgForCurrentDate, callback);
+          }
+
+        });
+        expander.expand();
+      }else{
+        delete msgForCurrentDate.rawUrls;
+      }
     }
   });
   //Stuff that has to be done once after the analyse is done
-
-  //Getting User Info From twitter
-  var uniqUsers = _.uniq(tmpUsernames);
-
-  getUserInfo(uniqUsers,callback, function(){
-    totalProgress.push("users");
-    console.log("users saved. ", totalProgress);
-    if(totalProgress.length === allDone){
-      analyseDone(metaArchiveInfo,callback);
-    }
-  });
   
+  if(doAsync){
+    //Getting User Info From twitter
+    var uniqUsers = _.uniq(tmpUsernames);
+    getUserInfo(uniqUsers,callback, function(err,res){
+      totalProgress.push("users");
+      if (err)  console.log("error while saving users. ", totalProgress, err);
+      else console.log("users saved. ", totalProgress);
+      
+      if(totalProgress.length === allDone){
+        analyseDone(metaArchiveInfo,callback);
+      }
+    });
+  }
+  
+  
+  //sorting the answers 
   
   //Saving the augmentet questionsDoc
+  _.each(questionsDoc.questions, function(qu){
+    function sortAnswers(a,b){ 
+      return b.weight - a.weight;
+    };
+  
+    qu.answers.sort(sortAnswers);
+  });
   callback(null, questionsDoc, function(err, res){
     totalProgress.push("questions");
     console.log("questions saved. ", totalProgress);
@@ -311,7 +329,9 @@ totalHours = msgByDate.length;
   });
 
     
-
+  if(!doAsync){
+    //callback(null, msgByDate);
+  }
   
   //Sub Functions
   function getSentiment(text, lang, callback){
@@ -327,7 +347,7 @@ totalHours = msgByDate.length;
           getSentiment(text, lang, callback);
           
         }else if(data.docSentiment){
-          callback(data.docSentiment.type);
+          callback(null, data.docSentiment.type);
         }else{
           alchemyapi = false;
           getSentiment(text, lang,callback);
@@ -335,7 +355,7 @@ totalHours = msgByDate.length;
       });
     }else{
       rest.get("http://data.tweetsentiments.com:8080/api/analyze.json?q="+encodeURIComponent(text+" food")).on('complete', function(data) {
-        callback(data.sentiment.name.toLowerCase());
+        callback(null, data.sentiment.name.toLowerCase());
       });
     }
   }
@@ -401,10 +421,10 @@ function getDataFromTextToArray(tmpData, target, reject){
  * 
  * @param{Array} dataSoFar The data that is allready aggregated
  * @param{Array} newData The array with strings
- * @param{Number} multiply The count of newData
+ * @param{Number} add The count of newData
  * @return{Array} dataSoFar The augmented Array
  */
-function aggrigateData(dataSoFar, newData, multiply){
+function aggrigateData(dataSoFar, newData, add){
   for (var i = 0; i < newData.length; i++){
     entry = _.detect(dataSoFar, function(entity){
      return (entity.text.toLowerCase() ==  _.strip(newData[i]).toLowerCase());
@@ -413,15 +433,15 @@ function aggrigateData(dataSoFar, newData, multiply){
     if(_.isUndefined(entry)){
       var entry = {};
       entry.text = _.strip(newData[i]);
-      if(!_.isUndefined(multiply)){
-        entry.weight = multiply;
+      if(!_.isUndefined(add)){
+        entry.weight = add;
       }else{
         entry.weight = 1;
       }
       dataSoFar.push(entry);
     }else{
-      if(!_.isUndefined(multiply)){
-        entry.weight += multiply;
+      if(!_.isUndefined(add)){
+        entry.weight += add;
       }else{
         entry.weight++;
       }
@@ -429,7 +449,45 @@ function aggrigateData(dataSoFar, newData, multiply){
   }
   return dataSoFar;
 }
+function aggrigateAggrigatedData(dataSoFar, newData){
+  _.each(newData, function(entry){
+    dataSoFar = aggrigateData(dataSoFar, entry.text, entry.weight);
+  });
+  return dataSoFar;
+}
 
+function isInGeo(data, lat,lon) {
+  for(var i=0; i<data.length; i++) {
+    if(data[i].lat === lat && data[i].lon == lon)
+      return i;
+  }
+  return -1;
+}
+
+function aggrigateGeo(values) {
+  var res = [];
+  values.forEach( function (arrays) {
+    arrays.forEach( function (point) {
+      var pos = isInGeo(res, point.lat, point.lon);
+      if(pos !== -1) {
+        var users = point.users;
+        users.forEach(function (user){
+          var upos = isIn(users, user.text);
+          if(upos !== -1){
+            users[upos].tweets = users[upos].tweets.concat(user.tweets);
+          }else{
+            res[pos].users.push(user)
+          }
+        });
+        
+      } else {
+        res.push(point);
+      }
+    });
+  });
+  return res;
+}
+    
 /**
  * Search for messages that are have a geo tag and aggregate 
  * them if the are on the same position.
@@ -501,33 +559,41 @@ function getGeoMarkerFromMessage(message, geoMarkerSoFar){
 function getUserInfo(users,save, callback){
   var userlist = "";
   var sendCounter =0;
+  var errors=[];
   _.each(users, function(user, index){
       userlist += ","+user
       if((index+1) % 99 === 0){
-        fetchUserData(userlist.substring(1), function(data){
-          sendCounter++;
-          saveUsers(data, save, function(){
-            sendCounter--;
-            if(sendCounter === 0){
-              callback();
-            }
-          });
-        });
+        fetchUserData(userlist.substring(1), handleUsers);
         userlist = "";
       }
   });
 
   if(userlist !== ""){
-    fetchUserData(userlist.substring(1), function(data){
-      sendCounter++;
-      saveUsers(data, save, function(){
-        sendCounter--;
-        if(sendCounter === 0){
-          callback();
-        }
-      });
-    });
+    fetchUserData(userlist.substring(1), handleUsers);
   }
+  
+  function handleUsers(err, data){
+          if (err) {
+            errors.push(err);
+            sendCounter--;
+            if(sendCounter === 0){
+                callback(errors, null);
+            }
+          }
+          else{
+            sendCounter++;
+            saveUsers(data, save, function(){
+              sendCounter--;
+              if(sendCounter === 0){
+                if(errors.length === 0){
+                callback(null,null);
+                }else{
+                  callback(errors, null);
+                }
+              }
+            });
+          }
+        }
   
 
   
@@ -578,10 +644,10 @@ function saveUsers(users, save, callback){
 function fetchUserData(users,callback){
   oAuth.get("http://api.twitter.com/1/users/lookup.json?screen_name="+users+"&include_entities=false", conf.twitter.accessToken, conf.twitter.accessTokenSecret, function(error, userdata) {
     if(error){
-      console.log("could not fetch Userdata for "+users, error);
+      callback({"error":error, "users":users }, null);
     }else{
       var userdata = JSON.parse(userdata);
-      callback(userdata);
+      callback(null,userdata);
     }
   });
   
@@ -682,13 +748,13 @@ function rateAnswer(question, message, tmpMetaInfo, username){
   }
   //Both question and answer have keywords in common
   _.each(question.metaData.words, function(word){
-      if(_.include(tmpMetaInfo.words, word)){
+      if(_.any(tmpMetaInfo.words, function(aWord){ return natural.PorterStemmer.stem(aWord) === natural.PorterStemmer.stem(word) ;})){
         res +=0.5;
       }
     });
   //Both question and answer have hashtags in common
   _.each(question.metaData.hashtags, function(hashtag){
-      if(_.include(tmpMetaInfo.hashtags, hashtag)){
+      if(_.any(tmpMetaInfo.hashtags, function(aHashtag){ return aHashtag.toLowerCase() === hashtag.toLowerCase() ;} )){
         res +=1;
       }
     });
@@ -722,6 +788,9 @@ function analyseDone(metaArchiveInfo, callback){
     callback(null,metaArchiveInfo);
 }
 //Module exports
+exports.aggrigateGeo = aggrigateGeo;
+exports.aggrigateAggrigatedData = aggrigateAggrigatedData;
+exports.aggrigateData = aggrigateData;
 exports.analyseMesseges = analyseMesseges;
 exports.getUserInfo = getUserInfo;
 exports.getNamesToGender = getNamesToGender;
