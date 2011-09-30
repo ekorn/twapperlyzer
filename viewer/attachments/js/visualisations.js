@@ -5,8 +5,8 @@ function addUrlChart(containerId, urls, showLimit) {
 	var chartOptions = {
 		chart: {
 			renderTo: containerId,
-			plotBackgroundColor: null,
-			plotBorderWidth: null,
+         height: Number($(window).height()) - Math.round(15*(Number($(window).height())/100)),
+         width: Number($(window).width()) - Math.round(8*(Number($(window).width())/100)),
 			plotShadow: false
 		},
 		title: {
@@ -47,7 +47,7 @@ function addUrlChart(containerId, urls, showLimit) {
 					this.slice();
 					var clicked = this;
 					setTimeout(function(){
-						location.href = clicked.config[0];
+            window.open(clicked.config[0],"_blank");
 					}, 500);
 					e.preventDefault();
 				}
@@ -93,7 +93,7 @@ function setUpGeoMarkerForArchive(data, mapContainerId) {
 		//One Message at one place, from one person;
 		if(geoM.users.length === 1 && geoM.users[0].tweets.length === 1) {
 			marker = new L.Marker(pos);
-			text +="<a href=\"http://twitter.com/#!/"+geoM.users[0].text+"/status/"+geoM.users[0].tweets[0].id+"\" target=\"_blank\" >"+geoM.users[0].text+"</a>";
+			text +="<a href=\"http://twitter.com/#!/"+geoM.users[0].text+"/status/"+geoM.users[0].tweets[0]+"\" target=\"_blank\" >"+geoM.users[0].text+"</a>";
 			//console.log("Simple Marker please",_.values(geoM.users));
 		} else if(geoM.users.length == 1) {//More than one message from one place and person.
 			marker = new L.Marker(pos);
@@ -181,4 +181,182 @@ function getAvantarMarker(msgLocation, text, imageUrl) {
 	// marker = new L.Marker(msgLocation);
 
 	return marker;
+}
+
+
+function grandTotal(laid, callback){
+     mydb.list("twapperlyzer/totalByDay","grandTotal", 
+    {
+      success: function(data) {
+        callback(null, data);
+        //console.log("grandTotal", data);
+      },
+      error: function(status) {
+          callback(status,null);
+      },
+      "startkey":[laid, 0],
+      "endkey":[laid,{}]
+    }
+  );
+}
+  
+//'archiveOverviewContainer-'+laid,
+function showGrowthChart(laid, data){
+  
+  //console.log("document"+ $(document).width()+"x"+$(document).height());
+  //console.log("window"+ $(window).width()+"x"+$(window).height());
+    
+  $('#archiveGrowthContainer-'+laid).html('');
+  var chartOptions = {
+       chart: {
+         renderTo: 'archiveGrowthContainer-'+laid,
+         zoomType: 'x',
+         height: Number($(window).height()) - Math.round(15*(Number($(window).height())/100)),
+         width: Number($(window).width()) - Math.round(8*(Number($(window).width())/100)),
+      },
+      title: {
+         text: null
+         //x: -20 //center
+      },
+      xAxis: {
+         type: 'datetime',
+         maxZoom: 14 * 24 * 3600000, // fourteen days
+         title: {
+            text: 'Time'
+         }
+      },
+      yAxis: {
+         title: {
+            text: 'Amount'
+         }
+      },
+      tooltip: {
+         formatter: function() {
+                   return '<b>'+ this.series.name +'</b><br/>'+
+               (new Date(this.x)).toDateString() +':  <b>'+this.y +'</b>';
+         }
+      },
+      legend: {
+         layout: 'vertical',
+         floating: true,
+         backgroundColor: '#FFFFFF',
+         align: 'right',
+         verticalAlign: 'top',
+         x: -10,
+         y: 100,
+         borderWidth: 1
+      },
+      plotOptions: {
+           area: {
+              lineWidth: 1,
+              marker: {
+                 enabled: false,
+                 states: {
+                    hover: {
+                       enabled: true,
+                       radius: 5
+                    }
+                 }
+              },
+              shadow: true,
+              states: {
+                 hover: {
+                    lineWidth: 1                  
+                 }
+              }
+           }
+      },
+      series: []
+   } 
+   
+  var line = {
+       pointInterval: 30* 24 * 3600 * 1000,//month*day*hour*sec
+       pointStart: 1299780000*1000,
+       name: 'Messages',
+       data: [25, 7, 4, 2, 2, 1, 2]
+    };
+    
+    var msgLine = {
+       type: 'area',
+       pointInterval:24 * 3600 * 1000,//day*hour*sec
+       pointStart: 0,
+       name: 'Messages',
+       data: []
+      };
+    var rtLine = {
+       type: 'area',
+       pointInterval:24 * 3600 * 1000,//day*hour*sec
+       pointStart: 0,
+       name: 'Retweets',
+       data: []
+      };
+    //Unique Users total new per day
+    var userLine = {
+       type: 'line',
+       pointInterval:24 * 3600 * 1000,//day*hour*sec
+       pointStart: 0,
+       name: 'New Users',
+       data: []
+      };
+    //Unique Users total new per day
+    var userLine2 = {
+       type: 'area',
+       pointInterval:24 * 3600 * 1000,//day*hour*sec
+       pointStart: 0,
+       name: 'Users Total',
+       data: []
+      };
+      msgLine.pointStart = rtLine.pointStart = userLine.pointStart = userLine2.pointStart = data[0].from *1000;
+      
+      var day = 86400;
+      var from = data[0].from;
+      var to = from + day;
+      var till = _.last(data).from;
+      lastEntry = data[0];
+      var totalUsersSoFar = 0;
+      _.each(data, function(entry){
+        
+        var daysPassed = Math.round((entry.from-lastEntry.from)/day)-1;
+        
+        if(daysPassed === 1){
+          var point = [((entry.from-day)*1000), 0];
+          msgLine.data.push(point);
+          rtLine.data.push(point);
+          if(_.last(userLine.data)[1]!=0 || entry.un !== 0)
+            userLine.data.push(point);
+
+        }else if (daysPassed > 1){
+          var startpoint = [((lastEntry.from+day)*1000), 0];
+          msgLine.data.push(startpoint);
+          rtLine.data.push(startpoint);
+          
+          
+          var endpoint = [((entry.from-day)*1000), 0];
+          msgLine.data.push(endpoint);
+          rtLine.data.push(endpoint);
+          if(_.last(userLine.data)[1]!==0)
+          userLine.data.push(startpoint);
+          
+          if(_.last(userLine.data)[1]!==0 || entry.un !== 0)
+          userLine.data.push(endpoint);
+        }
+        
+        msgLine.data.push([(entry.from * 1000), entry.msg]);
+        rtLine.data.push([(entry.from * 1000),entry.rt]);
+        if(entry.un>0){
+          userLine.data.push([(entry.from * 1000),entry.un]);
+          totalUsersSoFar+=entry.un;
+          userLine2.data.push([(entry.from * 1000),totalUsersSoFar]);
+        }
+        lastEntry= entry;
+      });
+      userLine2.data.push([(lastEntry.from * 1000),totalUsersSoFar]);
+
+    chartOptions.series.push(userLine2);
+    chartOptions.series.push(msgLine);
+    chartOptions.series.push(rtLine);
+    chartOptions.series.push(userLine);
+    
+  //console.log("Lets show", data);
+  chart = new Highcharts.Chart(chartOptions);
 }

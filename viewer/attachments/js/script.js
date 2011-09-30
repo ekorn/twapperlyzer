@@ -1,5 +1,6 @@
-var $_GET;
+var $_GET = {};
 var map;
+var chart;
 var chart;
 var userOptions = {};
 var config;
@@ -9,12 +10,22 @@ var twapperSession = {}; //The temporary variable where all the session data is 
 twapperSession.archiveList = [];
 twapperSession.archives = [];
 twapperSession.localArchiveList =[];
-messages.configNotFound = "config not found";
+twapperSession.users = [];
+twapperSession.navStore = {};
+twapperSession.navStore.step = "";
+twapperSession.navStore.time = "total";
+twapperSession.navStore.vis = "cloud";
 
+messages.configNotFound = "config not found";
+$.mobile.pushStateEnabled = false;
 
   
 $(window).load(function(){ 
   $(document).ready(function() {
+    //START HERE
+    $('.emoticonized').emoticonize({
+        animate: false
+    });
   $.mobile.showPageLoadingMsg();
   $.mobile.page.prototype.options.domCache = true;
   $.timeago.settings.allowFuture = true;
@@ -44,13 +55,14 @@ $.couch.db("dbname").info({
       });
     }
 });
+
 // Listen for any attempts to call changepage.
 $(document).bind( "pagebeforechange", function( e, data ) {
 	// We only want to handle changepage calls where the caller is
 	// asking us to load a page by URL.Beacuse afterwards when we are done withthe page creation 
   // we send a changePage request with a Object.
 	if ( typeof data.toPage === "string" ) {
-      console.log(data.toPage+" comming in.");
+      //console.log(data.toPage+" comming in.");
       
       //Getting the parameter out
       var params = data.toPage.split("?");
@@ -58,7 +70,7 @@ $(document).bind( "pagebeforechange", function( e, data ) {
         data.options.dataUrl = data.toPage;//Whats shown in the locations bar
         data.toPage = params[0] //Where we really going
         $_GET = getQueryParams(params[1]); //the parameter
-        console.log(data.toPage+" without params",$_GET);
+        //console.log(data.toPage+" without params",$_GET);
       }
       
       //a hack to deal with strange modifications of the urls in links
@@ -66,7 +78,7 @@ $(document).bind( "pagebeforechange", function( e, data ) {
       //is put in front of the url in the link
      
       data.toPage="#"+data.toPage.split("#")[1];
-      console.log(data.toPage+" now cleaned.");
+      //console.log(data.toPage+" now cleaned.");
       
       var reExTarget = /#(\w*)-(\w*)-(\d*)/
       var toPageParts = data.toPage.match(reExTarget);
@@ -80,7 +92,7 @@ $(document).bind( "pagebeforechange", function( e, data ) {
         target = $(data.toPage); 
         if(target.length === 0){//its not in the DOM so I load the laid
           e.preventDefault();
-          console.log("It themes like "+data.toPage+" do not exists.");
+          //console.log("It themes like "+data.toPage+" do not exists.");
           createArchivePage(toPageParts[2]+"-"+toPageParts[3], function(page){
             if(page === '#listArchivesPage'){
               $.mobile.changePage($(page),data.options);
@@ -92,13 +104,13 @@ $(document).bind( "pagebeforechange", function( e, data ) {
           //It has parameter but since we stay on the same page no event is triggered, so it have to be handled manually.
           if(params.length === 2 && $.mobile.activePage.attr("id") === data.toPage.substring(1)){
             document.location.hash = "#"+data.options.dataUrl.split("#")[1];
-            queryHander(data.toPage);
+            queryHandler(data.toPage);
           }else{
-            console.log($.mobile.activePage.attr("id")," from, nothing to do just let it path to",data.toPage);
+            //console.log($.mobile.activePage.attr("id")," from, nothing to do just let it path to",data.toPage);
           }
         }
       }
-	}
+  }
 });
 
 
@@ -246,7 +258,8 @@ function dbReady(info){
   
 
           }else{//Some minor Error, just let the user now where he can change his settings and route him to his target
-            popErrorMessage("Error while loading user config: "+err+". Check you Options",3500);
+            popErrorMessage("Error while loading user config: "+JSON.stringify(err)+". Check you Options",3500);
+            console.log("Error while loading user config:",err);
             if(document.location.hash === ""){
               $.mobile.changePage('#listArchivesPage',{ transition: "fade"} );
             }else{ //Move to the requited page
@@ -281,7 +294,8 @@ function dbReady(info){
         });
       },
       error: function(status) {
-          popErrorMessage("Could not load already analysed archives"+status, 3000);
+          popErrorMessage("Could not load already analysed archives"+JSON.stringify(status), 3000);
+          console.log("Could not load already analysed archives", status);
       }
   });
   
@@ -315,7 +329,8 @@ function setUpChangesFeed(){
               twapperSession.archives[archiveIdThatChanged] = data;
               //Fade out the progress bar when the doc is analysed 
               if(twapperSession.archives[archiveIdThatChanged].status === "done"){
-                $("#analyseProgress-"+twapperSession.archives[archiveIdThatChanged]._id).fadeOut(800);
+                $("#analyseProgress-"+archiveIdThatChanged).fadeOut(800);
+                onDone(archiveIdThatChanged);
               }
               //Fade in the progress bar when the doc is analysing
               if(data.status === "analysing"){
@@ -371,7 +386,7 @@ function createPages(){
   twapperSession.templates.navbarMemberFooter = Handlebars.compile( $("#navbarMemberFooter").html() );
   twapperSession.templates.navbarQuestionsFooter = Handlebars.compile( $("#navbarQuestionsFooter").html() );
   twapperSession.templates.navbarSingleButtonFooter = Handlebars.compile( $("#navbarSingleButtonFooter").html() );
-
+  twapperSession.templates.navbarVisulasiationFooter = Handlebars.compile( $("#navbarVisulasiationFooter").html() );
   
   //Elements
   twapperSession.templates.simpleList = Handlebars.compile( $("#simpleList").html() );
@@ -390,6 +405,7 @@ function createPages(){
     "footerButtonText":"About twapperlyzer"};
     
   $.mobile.pageContainer.append(twapperSession.templates.page(optionsPage));
+  $('#date33').scroller({ preset: 'datetime',theme: 'ios' });
   $('#optionsPage').page();
 
   //Archives List
@@ -400,7 +416,7 @@ function createPages(){
   
   var archivesPage = {
     "pageId":"listArchivesPage", 
-    "pageHeader":"Available Archives", 
+    "pageHeader":"Archives", 
     "listId":"archivesList",
     "navbarId" : "listArchivesNavbar"
     };
@@ -670,8 +686,16 @@ function generateArchiveList(parent, archiveList,localArchiveList, orderType){
 function selectedArchiveByList(event) {
   event.preventDefault();
   event.stopPropagation();
-  
-  createArchivePage($(this).attr("href").split("#page-")[1], function(page){$.mobile.changePage(page);});
+  var target = $(this).attr("href");
+  var targetParts = target.split("#page-");
+  if( $(target) === []){
+    createArchivePage(targetParts[1], function(page){$.mobile.changePage(page);});
+    
+  }else{
+    twapperSession.laid = targetParts[1];
+    //console.log("twapperSession.laid changes to", twapperSession.laid);
+    $.mobile.changePage(target);
+  }
 }
 
 function createArchivePage(requestedLaid, callback){
@@ -681,7 +705,7 @@ function createArchivePage(requestedLaid, callback){
   if(twapperSession.lastLaid != twapperSession.laid){
     mydb.openDoc( requestedLaid,  
       {success: function(data) {
-        console.log("data",data);
+        //console.log("data",data);
           setData(data, callback);
           //Check if the updated message count from the list has more messages that the one analysed in the archive.
           if (twapperSession.ytkUrlHash !== null){
@@ -692,9 +716,10 @@ function createArchivePage(requestedLaid, callback){
                 //If so do the update
                 twapperlyzerApi.updateArchive(url,config.thisdb, userOptions.dataprovider, function(err, result){
                   if(err!==null){
-                    popErrorMessage("Could not update this archive: "+err.msg, 2000);
+                    popErrorMessage("Could not update this archive: "+JSON.stringify(err), 2000);
+                    console.log("Could not update this archive:", err);
                   }else{
-                    popSimpleMessage("Updating this archive: "+result, 2000);
+                    popSimpleMessage("Updating this archive: "+result.id, 2000);
                   }
                 });
               }
@@ -732,6 +757,7 @@ function createArchivePage(requestedLaid, callback){
                 twapperlyzerApi.analyseArchive(twapperSession.selectedArchive.url, config.thisdb, userOptions.dataprovider, username, function(err, result){
                   if(err!==null){
                     popErrorMessage("Could not analyse this archive: "+err.msg, 2000);
+                    console.log("Could not analyse this archive",err);
                   }else{
                     mydb.openDoc(result.id,  
                       {success: function(data) {
@@ -753,231 +779,714 @@ function createArchivePage(requestedLaid, callback){
   }
 }
 
+function changeTargets(){
+
+  console.log("HUHU");
+}
 
 function setData(data,callback){
   if($('#page-'+data._id).length === 0){
     twapperSession.archives[data._id] = data;
     var laid = data._id;
+    twapperSession.archives[laid].timeStats = {"min":0,"max":{}};
     
-    //Main Archive Page
-    Handlebars.registerPartial('content', twapperSession.templates.archivePageContent);
-    Handlebars.registerPartial('widgetList', twapperSession.templates.widgetListTemplate);
-    
-    Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
-    
-    var archivePageData = {
-      "pageId":"page-"+data._id, 
-      "pageHeader": "Archive: "+data.archive_info.keyword,
-      
-      "archive": data
-      };
-    $.mobile.pageContainer.append(twapperSession.templates.page(archivePageData));
-    twapperSession.archives[data._id].currentMsg = 0;
-    $('#page-'+data._id).page();
-    
-    //Fade out the progress bar when the doc is analysed 
-    if(data.status === "done"){
-      $("#analyseProgress-"+data._id).remove();
-    } 
-
-    //$('#archiveWidgetsList-'+data._id).delegate('a', 'click', archiveWidgetsListHandler);
-    // Map Page
-    Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
-    Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
-    var mapPage = {
-      "pageId":"mapPage-"+laid, 
-      "pageHeader":"Map", 
-      "containerId":"mapContainer-"+laid,
-      "style" : ""
-      };
-    $.mobile.pageContainer.append(twapperSession.templates.page(mapPage));
-    $("#mapPage-"+laid).page();
+  //Main Archive Page
+  Handlebars.registerPartial('content', twapperSession.templates.archivePageContent);
+  Handlebars.registerPartial('widgetList', twapperSession.templates.widgetListTemplate);
   
-    $("#mapPage-"+laid).live('pagebeforeshow', function(){
-      if(_.isUndefined(twapperSession.archives[laid].geo)){
-        getTotal("geo",laid,function(err, res){
-          if (err) console.log("Error while fetching GeoData",err);
-          if(res) {
-            twapperSession.archives[laid].geo = res
-            setUpGeoMarkerForArchive(twapperSession.archives[laid].geo,'mapContainer-'+laid);
-          }
-        });
-      }else{
-        setUpGeoMarkerForArchive(twapperSession.archives[laid].geo,'mapContainer-'+laid);
-      }
-    });
-      
+  Handlebars.registerPartial('footer', twapperSession.templates.navbarSingleButtonFooter);
   
-    //show Messages Page
-    Handlebars.registerPartial('content', twapperSession.templates.listContent);
-    Handlebars.registerPartial('footer', twapperSession.templates.buttonFooter);
-    var showMsgsPage = {
-      "pageId":"showMsgsPage-"+laid, 
-      "pageHeader":"Messgaes", 
-      "listId":"msgList-"+laid, 
-      "footerButtonId":"moreMsgsButton-"+laid,
-      "footerButtonText": "More Messages"
-      };
-    $.mobile.pageContainer.append(twapperSession.templates.page(showMsgsPage));
-    $("#showMsgsPage-"+laid).page();
-    
-    $("#moreMsgsButton-"+laid).click(loadMessagesFromServer);
-    $("#showMsgsPage-"+laid).live('pagebeforeshow', function(){
-      loadMessagesFromServer();
-    });
-    
-    //archiveMentionsPage
-    Handlebars.registerPartial('content', twapperSession.templates.blockListContent);
-    Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
-    var mentionsPage = {
-    "pageId":"archiveMentionsPage-"+laid, 
-    "pageHeader":"Mentions in Archive", 
-    "blockId":"archiveMentionsContainer-"+laid,
-    "style":"margin: 0px auto; width: 320px; height: 400px; border: none;", 
-    "listHeader":"Total Mentions in this Archive: ",
-    "listId": "mentionsListId-"+laid,
-    "footerText":""
+  var archivePageData = {
+    "pageId":"page-"+data._id, 
+    "pageHeader": "Archive: "+data.archive_info.keyword,
+    "target": "javascript:changeTargets()",
+    "footerButtonText":"please ignore me",
+    "archive": data
     };
-    $.mobile.pageContainer.append(twapperSession.templates.page(mentionsPage));
-    $("archiveMentionsPage-"+laid).page();
-    
-    $("#archiveMentionsPage-"+laid).live('pagebeforeshow', function(){
-      if(_.isUndefined(twapperSession.archives[laid].mentions)){
-        getTotal("mentions",laid,function(err, res){
-          if (err) console.log("Error while fetching mentions",err);
-          if(res) {
-            twapperSession.archives[laid].mentions = res;
-            $("#archiveMentionsContainer-"+laid).jQCloud(_.first(twapperSession.archives[laid].mentions, userOptions.showLimit));
-            var mentionsListData = {};
-            mentionsListData.entry = twapperSession.archives[laid].mentions;
-            $("#mentionsListId-"+laid).append(twapperSession.templates.simpleList(mentionsListData));
-            $("#mentionsListId-"+laid).listview('refresh');
-          }
-        });
-      }
-    });
-    
-    //archiveHashtagsPage
-    Handlebars.registerPartial('content', twapperSession.templates.blockListContent);
-    Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
-    var hashtagsPage = {
-    "pageId":"archiveHashtagsPage-"+laid, 
-    "pageHeader":"Hastags in the Archive", 
-    "blockId":"archiveHashtagsContainer-"+laid,
-    "style":"margin: 0px auto; width: 320px; height: 400px; border: none;", 
-    "listHeader":"Total Hashtags in this Archive: ",
-    "listId": "hashtagListId-"+laid,
-    "footerText":""
-    };
-    $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
-    $("#archiveHashtagsPage-"+laid).page();
-    $("#archiveHashtagsPage-"+laid).live('pagebeforeshow', function(){
-      if(_.isUndefined(twapperSession.archives[laid].hashtags)){
-        getTotal("hashtags",laid,function(err, res){
-          if (err) console.log("Error while fetching hashtags",err);
-          if(res) {
-            twapperSession.archives[laid].hashtags = res;
-            $("#archiveHashtagsContainer-"+laid).jQCloud(_.first(twapperSession.archives[laid].hashtags, userOptions.showLimit));
-            var hashtagListData = {};
-            hashtagListData.entry = twapperSession.archives[laid].hashtags;
-            $("#hashtagListId-"+laid).append(twapperSession.templates.simpleList(hashtagListData));
-            $("#hashtagListId-"+laid).listview('refresh');
-          }
-        });
-      }
-    });
-    
-    //archiveMembersPage
-    Handlebars.registerPartial('content', twapperSession.templates.listContent);
-    Handlebars.registerPartial('footer', twapperSession.templates.navbarMemberFooter);
-    var membersPage = {
-    "pageId":"archiveMembersPage-"+laid, 
-    "pageHeader":"Members", 
-    "listId":"archiveMembersContainer-"+laid,
-    "style":""
-    };
-    $.mobile.pageContainer.append(twapperSession.templates.page(membersPage));
-    $("#archiveMembersPage-"+laid).page();
-    
-    //archiveLinksPage
-    Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
-    Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
-    var linksPage = {
-    "pageId":"archiveLinksPage-"+laid, 
-    "pageHeader":"Links in the Archive", 
-    "containerId":"archiveLinksContainer-"+laid,
-    "style":"width: 98%; height: 80%; margin: 0  auto",
-    "footerText":""
-    };
-    $.mobile.pageContainer.append(twapperSession.templates.page(linksPage));
-    $("#archiveLinksPage-"+laid).page();
-    $("#archiveLinksPage-"+laid).live('pagebeforeshow', function(){
-      if(_.isUndefined(twapperSession.archives[laid].urls)){
-        getTotal("urls",laid,function(err, res){
-          if (err) console.log("Error while fetching urls",err);
-          if(res) {
-            twapperSession.archives[laid].urls = res;
-            addUrlChart("archiveLinksContainer-"+laid, twapperSession.archives[laid].urls, userOptions.showLimit);
-          }
-        });
-      }
-    });
-    
-    //archiveQuestionsPage
-    Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
-    Handlebars.registerPartial('footer', twapperSession.templates.navbarQuestionsFooter);
-    
-    var questionsPage = {
-    "pageId":"archiveQuestionsPage-"+laid, 
-    "pageHeader":"Questions", 
-    "containerId":"archiveQuestionsContainer-"+laid,
-    "style":""
-    };
-    $.mobile.pageContainer.append(twapperSession.templates.page(questionsPage));
-    $("#archiveQuestionsPage-"+laid).page();
+  $.mobile.pageContainer.append(twapperSession.templates.page(archivePageData));
+  twapperSession.archives[data._id].currentMsg = 0;
+  $('#page-'+data._id).page();
+  
+  //remove out the progress bar when the doc is analysed 
+  if(data.status === "done"){
+    onDone(laid);
+  } 
+  
+  
 
-    $("#archiveQuestionsPage-"+laid).live('pagebeforeshow', function(){
-      if(_.isUndefined(twapperSession.archives[laid].questions)){
-        $.getJSON(showUrl(laid),{"type":"stats"}, function(data) {//This has to be done once and will not be overwritten
-          twapperSession.archives[laid].questions = {"stats":data};
-          $("#archiveQuestionsPage-"+laid).find( "h1" ).text(twapperSession.archives[laid].questions.stats.total+" Questions");
-          var footer = $("#archiveQuestionsPage-"+laid).find( ":jqmData(role=navbar) .ui-btn-text" );
-          $(footer[0]).text(twapperSession.archives[laid].questions.stats.goodAnswered+" Good Answered");
-          $(footer[1]).text(twapperSession.archives[laid].questions.stats.allAnswered+" All Answered");
-          $(footer[2]).text(twapperSession.archives[laid].questions.stats.unanswered+" Unanswered");
-          $(footer[3]).text(twapperSession.archives[laid].questions.stats.responder+" Responder");
-          $(footer[4]).text(twapperSession.archives[laid].questions.stats.questioner+" Questioner");
-          queryHander ("#archiveQuestionsPage-"+laid);
-        });
-      }
-    });
+  //archiveGrowthPage
+  Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+  var growthPage = {
+    "pageId":"archiveGrowthPage-"+laid, 
+    "pageHeader":"Growth", 
+    "containerId":"archiveGrowthContainer-"+laid,
+    "style":"height:"+Number($(window).height()) - Math.round(5*(Number($(window).height())/100))+"px;",
+    "footerText":""
+    };
+  $.mobile.pageContainer.append(twapperSession.templates.page(growthPage));
+  $("#archiveGrowthPage-"+laid).page();
+  $("#archiveGrowthPage-"+laid).live('pagebeforeshow', function(){
+    setDefaultGET();
+    twapperSession.navStore = resetNavStore(twapperSession.navStore);
+    queryHandler ("#archiveGrowthPage-"+laid);
+  });
+  // Map Page
+  Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+  var mapPage = {
+    "pageId":"mapPage-"+laid, 
+    "pageHeader":"Map", 
+    "containerId":"mapContainer-"+laid,
+    "style" : ""
+    };
+  $.mobile.pageContainer.append(twapperSession.templates.page(mapPage));
+  $("#mapPage-"+laid).page();
+
+  $("#mapPage-"+laid).live('pagebeforeshow', function(){
+    setDefaultGET();
+    if(_.isUndefined(twapperSession.archives[laid].geo)){
+      getAggrigatedData("geo",laid,$_GET.from, $_GET.to,function(err, res){
+        if (err) console.log("Error while fetching GeoData",err);
+        if(res) {
+          twapperSession.archives[laid].geo = res
+          setUpGeoMarkerForArchive(twapperSession.archives[laid].geo,'mapContainer-'+laid);
+        }
+      });
+    }else{
+      setUpGeoMarkerForArchive(twapperSession.archives[laid].geo,'mapContainer-'+laid);
+    }
+  });
+    
+
+  //show Messages Page
+  Handlebars.registerPartial('content', twapperSession.templates.listContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.buttonFooter);
+  var showMsgsPage = {
+    "pageId":"showMsgsPage-"+laid, 
+    "pageHeader":"Messgaes", 
+    "listId":"msgList-"+laid, 
+    "footerButtonId":"moreMsgsButton-"+laid,
+    "footerButtonText": "More Messages"
+    };
+  $.mobile.pageContainer.append(twapperSession.templates.page(showMsgsPage));
+  $("#showMsgsPage-"+laid).page();
+  
+  $("#moreMsgsButton-"+laid).click(loadMessagesFromServer);
+  $("#showMsgsPage-"+laid).live('pagebeforeshow', function(){
+    loadMessagesFromServer();
+  });
+  
+  //archiveMentionsPage
+  Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
+  var mentionsPage = {
+  "pageId":"archiveMentionsPage-"+laid, 
+  "pageHeader":"Mentions in Archive"
+  };
+  $.mobile.pageContainer.append(twapperSession.templates.page(mentionsPage));
+  $("archiveMentionsPage-"+laid).page();
+  
+  $("#archiveMentionsPage-"+laid).live('pagebeforeshow', function(){
+    setDefaultGET();
+    twapperSession.navStore = resetNavStore(twapperSession.navStore);
+    
+    handleNavbar($("#archiveMentionsPage-"+laid));
+   
+    if(_.isUndefined(twapperSession.archives[laid].mentions)){
+      twapperSession.archives[laid].mentions = {};
+    }
+    queryHandler ("#archiveMentionsPage-"+laid);
+  });
+  
+  //archiveHashtagsPage
+  Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
+  var hashtagsPage = {
+  "pageId":"archiveHashtagsPage-"+laid, 
+  "pageHeader":"Hastags in the Archive"
+  };
+  $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
+
+  $("#archiveHashtagsPage-"+laid).page();
+  
+  $("#archiveHashtagsPage-"+laid).live('pagebeforeshow', function(){
+    setDefaultGET();
+    twapperSession.navStore = resetNavStore(twapperSession.navStore);
+    
+    handleNavbar($("#archiveHashtagsPage-"+laid));
+
+    if(_.isUndefined(twapperSession.archives[laid].hashtags)){
+      twapperSession.archives[laid].hashtags =  {};
+    }
+    queryHandler ("#archiveHashtagsPage-"+laid);
+  });
+  
+  //archiveKeywordsPage
+  Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
+  var hashtagsPage = {
+  "pageId":"archiveKeywordsPage-"+laid, 
+  "pageHeader":"Hastags in the Archive"
+  };
+  $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
+
+  $("#archiveKeywordsPage-"+laid).page();
+  
+  $("#archiveKeywordsPage-"+laid).live('pagebeforeshow', function(){
+    setDefaultGET();
+    twapperSession.navStore = resetNavStore(twapperSession.navStore);
+    handleNavbar($("#archiveKeywordsPage-"+laid));
+
+    
+    if(_.isUndefined(twapperSession.archives[laid].keywords)){
+      twapperSession.archives[laid].keywords =  {};
+    }
+    queryHandler ("#archiveKeywordsPage-"+laid);
+  });
+  
+  //archiveMembersPage
+  Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
+  var hashtagsPage = {
+  "pageId":"archiveMembersPage-"+laid, 
+  "pageHeader":"Members in the Archive"
+  };
+  $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
+
+  $("#archiveMembersPage-"+laid).page();
+  
+  $("#archiveMembersPage-"+laid).live('pagebeforeshow', function(){
+    setDefaultGET();
+    twapperSession.navStore = resetNavStore(twapperSession.navStore);
+    handleNavbar($("#archiveMembersPage-"+laid));
+    
+    if(_.isUndefined(twapperSession.archives[laid].member)){
+      twapperSession.archives[laid].member =  {};
+    }
+    queryHandler ("#archiveMembersPage-"+laid);
+  });
+  
+  //archiveRetweeterPage
+  Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
+  var hashtagsPage = {
+  "pageId":"archiveRetweeterPage-"+laid, 
+  "pageHeader":"Retweeter"
+  };
+  $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
+
+  $("#archiveRetweeterPage-"+laid).page();
+  
+  $("#archiveRetweeterPage-"+laid).live('pagebeforeshow', function(){
+    setDefaultGET();
+    twapperSession.navStore = resetNavStore(twapperSession.navStore);
+    handleNavbar($("#archiveRetweeterPage-"+laid));
+    
+    if(_.isUndefined(twapperSession.archives[laid].rtUser)){
+      twapperSession.archives[laid].rtUser =  {};
+    }
+    queryHandler ("#archiveRetweeterPage-"+laid);
+  });
+  
+  
+  //archiveLinksPage
+  Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+  var linksPage = {
+  "pageId":"archiveLinksPage-"+laid, 
+  "pageHeader":"Links in the Archive", 
+  "containerId":"archiveLinksContainer-"+laid,
+  "style":"height:"+(Number($(document).height())-100)+"px;",
+  "footerText":""
+  };
+  $.mobile.pageContainer.append(twapperSession.templates.page(linksPage));
+  $("#archiveLinksPage-"+laid).page();
+  $("#archiveLinksPage-"+laid).live('pagebeforeshow', function(){
+    setDefaultGET();
+    if(_.isUndefined(twapperSession.archives[laid].urls)){
+      getAggrigatedData("urls",laid,$_GET.from, $_GET.to,function(err, res){
+        if (err) console.log("Error while fetching urls",err);
+        if(res) {
+          twapperSession.archives[laid].urls = res;
+          addUrlChart("archiveLinksContainer-"+laid, twapperSession.archives[laid].urls, userOptions.showLimit);
+        }
+      });
+    }
+  });
+  //archiveQuestionsPage
+  Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.navbarQuestionsFooter);
+  
+  var questionsPage = {
+  "pageId":"archiveQuestionsPage-"+laid, 
+  "pageHeader":"Questions", 
+  "containerId":"archiveQuestionsContainer-"+laid,
+  "style":""
+  };
+  $.mobile.pageContainer.append(twapperSession.templates.page(questionsPage));
+  $("#archiveQuestionsPage-"+laid).page();
+
+  $("#archiveQuestionsPage-"+laid).live('pagebeforeshow', function(){
+    if(_.isUndefined(twapperSession.archives[laid].questions)){
+      $.getJSON(showUrl(laid),{"type":"stats"}, function(data) {//This has to be done once and will not be overwritten
+        twapperSession.archives[laid].questions = {"stats":data};
+        $("#archiveQuestionsPage-"+laid).find( "h1" ).text(twapperSession.archives[laid].questions.stats.total+" Questions");
+        var footer = $("#archiveQuestionsPage-"+laid).find( ":jqmData(role=navbar) .ui-btn-text" );
+        $(footer[0]).text(twapperSession.archives[laid].questions.stats.goodAnswered+" Good Answered");
+        $(footer[1]).text(twapperSession.archives[laid].questions.stats.allAnswered+" All Answered");
+        $(footer[2]).text(twapperSession.archives[laid].questions.stats.unanswered+" Unanswered");
+        $(footer[3]).text(twapperSession.archives[laid].questions.stats.responder+" Responder");
+        $(footer[4]).text(twapperSession.archives[laid].questions.stats.questioner+" Questioner");
+        
+        queryHandler ("#archiveQuestionsPage-"+laid);
+      });
+    }
+  });
+  $.mobile.hidePageLoadingMsg();
+  callback("#page-"+data._id);
+  
+  function setDefaultGET(){
+
+    if(_.isUndefined($_GET.to) && _.isUndefined($_GET.from)){
+      
+      $_GET.from = twapperSession.archives[laid].timeStats.min;
+      $_GET.to = twapperSession.archives[laid].timeStats.max;
+    }
+  }
+  
+  function handleNavbar(page){
+    if($_GET.from == twapperSession.archives[laid].timeStats.min && 
+        $_GET.to == twapperSession.archives[laid].timeStats.max)
+      {
+      var navbars = page.find( ":jqmData(role=navbar)" );
+      $(navbars[0]).hide();
+    }
+  }
     
 
     
     //END off overfilling the DOM
   }else{
-    console.log("Update....");//FIXME
+    console.log("Update....",data);//FIXME
     var tmp = twapperSession.archives[data._id].currentMsg ;
     twapperSession.archives[data._id] = data; 
     twapperSession.archives[data._id].currentMsg = tmp;
+      $.mobile.hidePageLoadingMsg();
+  callback("#page-"+data._id);
   }
   
-  $.mobile.hidePageLoadingMsg();
-  callback("#page-"+data._id);
+
 }
 
-function queryHander (page){
+
+function onDone(laid){
+
+$("#dynamicArchieInfo-"+laid).empty();
+$("#analyseProgress-"+laid).remove();
+mydb.view("twapperlyzer/timeStats", {
+    success: function(data) {
+      if(data.rows.length>0){
+        twapperSession.archives[laid].timeStats = data.rows[0].value;
+        getDynamicArchieInfo();
+      }else{
+        setTimeout(updateTimeStats(laid, callback), 1000);
+      }
+    },
+    "key":laid,
+    error: function(status) {
+        popErrorMessage("Could not load the time Statistics"+JSON.stringify(status), 3000);
+        console.log("Could not load the time Statistics", status);
+    }
+});
+
+function getDynamicArchieInfo(){
+  //Set the retweet count for header info
+  mydb.view("twapperlyzer/rt",
+    {
+      success: function(rtcount) {
+        rtcount = rtcount.rows[0].value;
+        tweetcount = Number($("#currentArchiveCount-"+laid).text());
+        var line = "<p>Retweets = "+rtcount+" ("+Math.round(rtcount/(tweetcount/100))+"%)</p>";
+        $("#dynamicArchieInfo-"+laid).append($(line).hide().fadeIn(1000));
+        //$('#currentArchiveCount-'+laid).text(msg+", Retweets = "+data.rows[0].value+" ("+Math.round(data.rows[0].value/(msg/100))+"%)");
+      },
+      "startkey":[laid,0],
+      "endkey":[laid,{}],
+      error: function(status) {
+          popErrorMessage("Could not load the retweet Count"+JSON.stringify(status), 3000);
+          console.log("Could not load the retweet Count", status);
+      }
+    });
+  //Sentiment for header info
+  mydb.view("twapperlyzer/sentiment",
+  {
+    success: function(sentiment) {
+      sentiment = sentiment.rows[0].value;
+      tweetcount = Number($("#currentArchiveCount-"+laid).text());
+      var line = '<p class="emoticonized">:-) '+Math.round(sentiment.positive/(tweetcount/100))+'% :-| ' + Math.round(sentiment.neutral/(tweetcount/100)) + '% :-( ' +Math.round(sentiment.negative/(tweetcount/100)) + '% </p>';
+      $("#dynamicArchieInfo-"+laid).append($(line).hide().fadeIn(1510));
+      //console.log("sentiment", , );
+      $('.emoticonized').emoticonize({
+        animate: false
+      });
+    },
+    "startkey":[laid, 0],
+    "endkey":[laid, {}],
+    error: function(status) {
+        popErrorMessage("Could not load the user info for "+user.text+". "+JSON.stringify(status), 3000);
+        console.log("Could not load the user info for "+user.text ,status);
+    }
+  });
+
+  //Gender for header info
+    mydb.list("twapperlyzer/gender","archiveUser", {
+        success: function(gender) {
+          var total = gender.male + gender.female + gender.neutral;
+          var line = '<p>'+total+' Member, ♀'+Math.round(gender.female/(total/100))+'% ♂'+Math.round(gender.male/(total/100))+'% </p>';
+          $("#dynamicArchieInfo-"+laid).append($(line).hide().fadeIn(1520));
+        },
+        error: function(status) {
+            callback(status,null);
+        },
+        "key":laid
+      }
+    );
+    
+    //Language for header info
+
+    mydb.list("twapperlyzer/aggrigateMin2","language", {
+        success: function(data) {
+          var line = "<p>";
+          if(data.length === 1){
+            line +="All msg are in "+data[0].text
+          }else if(data.length > 0)
+            line += "Most msg are in "+data[0].text;
+          if(data.length > 1)
+            line += " and some in "+data[1].text;
+          line +="</p>";
+          
+          $("#dynamicArchieInfo-"+laid).append($(line).hide().fadeIn(1600));
+        },
+        error: function(status) {
+            callback(status,null);
+        },
+        "startkey":[laid, 0],
+        "endkey":[laid,{}]
+      }
+    );
+  }
+  
+}
+
+function removeParameter(url, parameter)
+{
+  var urlparts= url.split('?');
+
+  if (urlparts.length>=2)
+  {
+      var urlBase=urlparts.shift(); //get first part, and remove from array
+      var queryString=urlparts.join("?"); //join it back up
+
+      var prefix = encodeURIComponent(parameter)+'=';
+      var pars = queryString.split(/[&;]/g);
+      for (var i= pars.length; i-->0;)               //reverse iteration as may be destructive
+          if (pars[i].lastIndexOf(prefix, 0)!==-1)   //idiom for string.startsWith
+              pars.splice(i, 1);
+      url = urlBase+'?'+pars.join('&');
+  }
+  return url;
+}
+
+function resetNavStore(navStore){
+  navStore.step = "";
+  navStore.time = "total";
+  navStore.vis = "cloud";
+  return navStore;
+}
+
+function queryHandler (page){
   pageParts = page.split("-");
-  //console.log("WHAT now", page, pageParts);
+  //console.log("WHAT now", page, pageParts, $_GET);
   switch(pageParts[0]){
+    case "#archiveGrowthPage" :
+    
+        if(_.isUndefined(twapperSession.archives[twapperSession.laid].growth)){
+          grandTotal(twapperSession.laid, function(err, res){
+            
+            if(res.length === 0){
+              $.mobile.changePage("#page-"+twapperSession.laid, {reverse: true});
+              popErrorMessage("You just hit a bug this analysis has to be deleted and redone",3000);
+            }else{
+              twapperSession.archives[twapperSession.laid].growth = res;
+              showGrowthChart(twapperSession.laid, twapperSession.archives[twapperSession.laid].growth);
+            }
+          });
+        }else{
+          showGrowthChart(twapperSession.laid, twapperSession.archives[twapperSession.laid].growth);
+        }
+    break;
+    
     case "#archiveQuestionsPage" :
       if(!_.isUndefined($_GET.type)){
         getType($_GET.type, pageParts[1]+"-"+pageParts[2]);
       }
     break;
+    case "#archiveMentionsPage" :
+      setParams(page, "mentions", pageParts[1]+"-"+pageParts[2]);
+    break;
+    case "#archiveHashtagsPage" :
+      setParams(page, "hashtags", pageParts[1]+"-"+pageParts[2]);
+    break;
+    case "#archiveMembersPage" :
+      setParams(page, "member", pageParts[1]+"-"+pageParts[2]);
+    break;
+    case "#archiveRetweeterPage" :
+      setParams(page, "rtUser", pageParts[1]+"-"+pageParts[2]);
+    break;
+    case "#archiveKeywordsPage" :
+      setParams(page, "keywords", pageParts[1]+"-"+pageParts[2]);
+    break;
+    
+    default :
+      if(!_.isUndefined($_GET)){
+        console.log("No action for ", page," $_GET is ", $_GET);
+      }
+    break;
   }
 }
 
+function setParams(page, name, laid){
+  page = $(page);
+  var container = getEmptyContainer(page);
+  //Case the total for the archive is requested
+  if(
+     ($_GET.from == twapperSession.archives[laid].timeStats.min &&  
+      $_GET.to == twapperSession.archives[laid].timeStats.max))
+    {
+
+    if(_.isUndefined(twapperSession.archives[laid][name].total)){
+      getAggrigatedData(name,laid,twapperSession.archives[laid].timeStats.min,twapperSession.archives[laid].timeStats.max, function(err, res){
+        if (err) console.log("Error while fetching "+name,err);
+        if(res) {
+          twapperSession.archives[laid][name].total = res;
+          setVis(twapperSession.archives[laid][name].total);
+        }
+      });
+      }else{
+        setVis(twapperSession.archives[laid][name].total);
+      }
+  }else {//All other cases wont be cached
+  console.log("try to get some "+name, $_GET);
+    getAggrigatedData(name,laid,$_GET.from,$_GET.to, function(err, res){
+      if (err) console.log("Error while fetching mentions",err);
+      console.log("It is ", res);
+      if(res) {
+        if(res !== {}){
+          setVis(res);
+        }else{
+          console.log("Show no Data msg");
+          container.append("<div><h2>No Data for this Period</h2></div>");
+        }
+      }
+    });
+  }
+  
+  function setVis(data){
+    if($_GET.vis === "cloud"){
+       setCloud(data, container, name+"-"+laid);
+    }
+    if($_GET.vis === "list"){
+      setSimpleList( data, container, name+"-"+laid);
+    }
+  }
+}
+
+function step(page, step){
+  twapperSession.navStore.step = step;
+  var changeHash = true;
+  page = $(page);
+  var buttonText = $(page.find(":jqmData(role=navbar)")[0]).find(".ui-btn-text");
+  
+  if(step === "previous"){
+    var from = Number($_GET.from) - Number(twapperSession.navStore.time);
+    var to   = Number($_GET.from);
+    
+    if(from < twapperSession.archives[twapperSession.laid].timeStats.min){
+      changeHash = false;
+    }else{
+      var nextFrom = from - Number(twapperSession.navStore.time);
+      var nextTo   = Number(from);
+      setButtonText(buttonText, nextFrom, nextTo);
+    }
+  }
+  if(step === "forward"){
+    var from = Number($_GET.from) + Number(twapperSession.navStore.time);
+    var to = Number($_GET.to) + Number(twapperSession.navStore.time);
+    
+    if(from > twapperSession.archives[twapperSession.laid].timeStats.max){
+      changeHash = false;
+    }else{
+      var nextFrom = from + Number(twapperSession.navStore.time);
+      var nextTo = to + Number(twapperSession.navStore.time);
+      setButtonText(buttonText, nextFrom, nextTo);
+    }
+  }
+  //console.log("Move on",changeHash, to, from, twapperSession.archives[twapperSession.laid].timeStats);
+  if(changeHash === true){
+      var newHash = removeParameter(document.location.hash, "from");
+      newHash = removeParameter(newHash, "to");
+      newHash += "&from="+from+"&to="+to;
+      
+      //The new Header to reflects the time period
+      
+      var fromMili = from*1000;
+      var toMili = to*1000;
+      var from = new Date(fromMili);
+      var to = new Date(toMili);
+      header = page.find("h1").text(from.toLocaleDateString()+" "+from.toLocaleTimeString()+" - "+to.toLocaleDateString()+" "+to.toLocaleTimeString());
+      document.location.hash = newHash;
+    }
+    
+}
+
+function timestep(page, time){
+  twapperSession.navStore.time = time;
+  var pageParts = page.split("-")
+  pageO = $(page);
+  var navbars = pageO.find( ":jqmData(role=navbar)" );
+  //Click on total Button
+  if(time === "total"){
+    $(navbars[0]).hide();
+    //RESET HEADER
+    header = pageO.find("h1").text(pageParts[0].replace("Page","").replace("#archive",""));
+
+    var newHash = removeParameter(document.location.hash, "from");
+    newHash = removeParameter(newHash, "to");
+    //set period to whole Archive
+    newHash += "&from="+twapperSession.archives[twapperSession.laid].timeStats.min+"&to="+twapperSession.archives[twapperSession.laid].timeStats.max;
+    
+    document.location.hash = newHash;
+
+  }
+  else {//Switching from times like from hour to Day
+    $(navbars[0]).show();
+    var from = $_GET.from;
+    var to = Number($_GET.from)+Number(time);
+    
+    setButtonText($(navbars[0]).find(".ui-btn-text"), 
+                    Number($_GET.from) - Number(twapperSession.navStore.time), 
+                    Number($_GET.from) + Number(twapperSession.navStore.time));
+    
+    //The new Header to reflects the time period
+    var fromMili = from*1000;
+    var toMili = to*1000;
+    var from = new Date(fromMili);
+    var to = new Date(toMili);
+    header = pageO.find("h1").text(from.toLocaleDateString()+" "+from.toLocaleTimeString()+" "+to.toLocaleDateString()+" "+to.toLocaleTimeString());
+
+    var newHash = removeParameter(document.location.hash, "from");
+    newHash = removeParameter(newHash, "to");
+    newHash += "&from="+$_GET.from+"&to="+(Number($_GET.from)+Number(time));
+    document.location.hash = newHash;
+
+  }
+}
+
+function setButtonText(buttonText, from, to){
+  
+  if(from < twapperSession.archives[twapperSession.laid].timeStats.min){
+    $(buttonText[0]).text("END");
+  }else{
+     $(buttonText[0]).text("<=");
+  }
+  
+  if(to > twapperSession.archives[twapperSession.laid].timeStats.max){
+    $(buttonText[1]).text("END");
+  }else{
+    $(buttonText[1]).text("=>");
+  }
+}
+
+function changeView(page, vis){
+  twapperSession.navStore.vis = vis;
+  pageO = $(page);
+  var navbars = pageO.find( ":jqmData(role=navbar)" );
+  if(vis === "period")  {
+
+    
+    var startDate;
+    var endDate;
+    
+    var startDateF = function(valueText, inst){
+      startDate = new Date(valueText);
+      setTimeout(showEndDate, 100);
+    };
+    function showEndDate(){
+      $(page+"-endDate").scroller('show');
+    }
+    var endDateF = function(valueText, inst){
+      var endDate = new Date(valueText);
+      
+      var newHash = removeParameter(document.location.hash, "from");
+      newHash = removeParameter(newHash, "to");
+   
+
+      newHash += "&from="+Math.round(startDate.getTime()/1000.0)+"&to="+Math.round(endDate.getTime()/1000.0);
+            //unhighlight the buttons
+      //The Period
+      $($(navbars[2]).find("a")[2]).removeClass("ui-btn-active ui-btn-down-a");//
+console.log($($(navbars[2]).find("a")[2]));
+      //highlight the buttons
+      if($_GET.vis === "cloud"){
+        $($(navbars[2]).find("a")[0]).addClass("ui-btn-down-a ui-btn-active");
+      }else if($_GET.vis === "list"){
+        $($(navbars[2]).find("a")[1]).addClass("ui-btn-down-a ui-btn-active");
+      }
+      
+      //unhighlight the buttons
+      //The <= => Navbar
+      _.each($(navbars[0]).find("a"), function(button){
+        $(button).removeClass("ui-btn-down-a ui-btn-active");
+      });
+      //The total
+      $($(navbars[1]).find("a")[3]).removeClass("ui-btn-down-a ui-btn-active");
+
+      document.location.hash = newHash;
+    };
+
+
+    //console.log("twapperSession.laid",twapperSession.laid);
+    $(page+"-startDate").scroller({ preset: 'datetime', setText:"start date", theme:"ios", onSelect:startDateF });
+    $(page+"-startDate").scroller('setDate', (new Date(twapperSession.archives[twapperSession.laid].timeStats.min *1000))); 
+    $(page+"-endDate").scroller({ preset: 'datetime', setText:"end date", theme:"ios", onSelect:endDateF });
+    $(page+"-endDate").scroller('setDate', (new Date(twapperSession.archives[twapperSession.laid].timeStats.max *1000))); 
+
+    $(page+"-startDate").scroller('show');
+    
+  }else{
+    $(navbars[1]).show();
+    if(document.location.hash.indexOf("from=") === -1){
+      document.location.hash = document.location.hash.split("?")[0]+"?vis="+vis+"&from="+twapperSession.archives[twapperSession.laid].timeStats.min+"&to="+twapperSession.archives[twapperSession.laid].timeStats.max
+    }else{
+      document.location.hash = removeParameter(document.location.hash, "vis")+"&vis="+vis;
+    }
+  }
+  
+}
+
+function getEmptyContainer(page){
+  var container = page.find( ":jqmData(role=content)" );
+  container.empty();
+  return container;
+}
+
+function setCloud(data, container, name){
+  container.append('<div id="'+name+'" style = "margin: 0px auto; width:'+$(window).width()+'px; height:'+(Number($(window).height()) - Math.round(25*(Number($(window).height())/100)))+'px; border: none;" >');
+  $("#"+name).jQCloud(_.first(data, userOptions.showLimit));
+}
+
+//Functions for the Question Page
     function getType(type,laid){
       switch(type){
         case "goodAnswered" :
@@ -1014,20 +1523,20 @@ function queryHander (page){
         if(_.isUndefined(twapperSession.archives[laid].questions.responder)){
           $.getJSON(showUrl(laid),{"type":"responder"}, function(data) {
             twapperSession.archives[laid].questions.responder = data;
-            setSimpleList(twapperSession.archives[laid].questions.responder, $("#archiveQuestionsContainer-"+laid) , laid);
+            setSimpleList(twapperSession.archives[laid].questions.responder, $("#archiveQuestionsContainer-"+laid),"responder"+laid);
           });
         }else{
-          setSimpleList(twapperSession.archives[laid].questions.responder, $("#archiveQuestionsContainer-"+laid) , laid);
+          setSimpleList(twapperSession.archives[laid].questions.responder, $("#archiveQuestionsContainer-"+laid),"responder"+laid);
         }
         break;
         case "questioner" :
         if(_.isUndefined(twapperSession.archives[laid].questions.questioner)){
           $.getJSON(showUrl(laid),{"type":"questioner"}, function(data) {
             twapperSession.archives[laid].questions.questioner = data;
-            setSimpleList(twapperSession.archives[laid].questions.questioner, $("#archiveQuestionsContainer-"+laid) , laid);
+            setSimpleList(twapperSession.archives[laid].questions.questioner, $("#archiveQuestionsContainer-"+laid) ,"questioner"+laid);
           });
         }else{
-          setSimpleList(twapperSession.archives[laid].questions.questioner, $("#archiveQuestionsContainer-"+laid) , laid);
+          setSimpleList(twapperSession.archives[laid].questions.questioner, $("#archiveQuestionsContainer-"+laid),"questioner"+laid);
         }
         break;
         default:
@@ -1050,7 +1559,7 @@ function queryHander (page){
       });
     }
 
-    function setSimpleList(data, container , laid){
+    function setSimpleList(data, container ,name){
       container.empty();
       var first10p = Math.floor((10*(data.length/100)));
 
@@ -1058,7 +1567,7 @@ function queryHander (page){
       //listData.entry = _.first(data, Math.min(first10p, userOptions.showLimit));
       listData.entry = data;
       container.empty();
-      container.append(twapperSession.templates.listContent({"listId":"simpleList-"+laid}));
+      container.append(twapperSession.templates.listContent({"listId":"simpleList-"+name}));
       container = container.find( "ul" );
       container.append(twapperSession.templates.simpleList(listData));
       container.listview();
@@ -1206,7 +1715,7 @@ function createSelectedArchiveObject(array){
   return res;
 }
 
-function getTotal(view,laid, callback){
+function getAggrigatedData(view,laid,sk,ek, callback){
   mydb.list("twapperlyzer/aggrigate",view, {
       success: function(data) {
         callback(null,data);
@@ -1214,8 +1723,10 @@ function getTotal(view,laid, callback){
       error: function(status) {
           callback(status,null);
       },
-      "startkey":[laid,0],
-      "endkey":[laid,{}]
+      //"startkey":[laid, 0],
+      //"endkey":[laid,{}]
+      "startkey":[laid,Number(sk)],
+      "endkey":[laid,Number(ek)]
     }
   );
 }

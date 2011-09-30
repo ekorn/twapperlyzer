@@ -276,69 +276,95 @@ function analyseAndUpdate(archiveInfo, currentDB, request, response){
   var ptime = new Date();
   analyser.analyseMesseges(archiveInfo, function(err, analysePart, callback){
     if (err) throw err;
-    db.save(analysePart._id, analysePart, function (err, res) {
-      if (err) {
-        console.log("Error while save ",analysePart, err);
-        db.get(analysePart._id, function (err, doc){
-          if (err) {
-            console.log("Cannot resolve error in get");
-            throw err;
-          }else{
-            var newDoc = mergeDocs(doc, analysePart);
-            db.save(newDoc._id, newDoc, function (err, res) {
-              if (err) {
-                console.log("Cannot resolve error in save");
-                throw err;
-              }else{
-                handleRes();
-              }
-            });
-          }
-        });
-      }else{
-         handleRes();
-      }
-
-      function handleRes(){
-        if(!_.isUndefined(analysePart.messagesSoFar)){
-          if(analysePart.status === "analysing"){
-            callback(null, "ok")
-            var updating = new helper.ResponseBean();
-            updating.status = "ok";
-            updating.msg = "analysing";
-            updating.id = archiveInfo._id;
-            sendJSON(request, response, updating);
-          }else if(analysePart.status === "done"){
-            db.get("config", function(err, res){
-              var analyseTime = (new Date().getTime()- ptime.getTime());
-              var tweet = "after "+helper.convertMilliseconds(analyseTime).clock+" is #twapperlyzer done with "+analysePart.archive_info.keyword
-              if (res) {
-                tweet+=" see http://"+res.standardUrl+"/#page-"+analysePart._id;
-              }
-              if(exist(request.query.mention) && request.query.mention !== "" ){
-                tweet = "@"+request.query.mention+" "+tweet
-              }
-              if(conf.twapperlyzer.sendTweets === true){
-                oAuth.post("http://api.twitter.com/1/statuses/update.json", conf.twitter.accessToken, 
-                conf.twitter.accessTokenSecret, {"status":tweet}, function(error, data) {
-                  if(error) console.log(require('sys').inspect(error));
-                }); 
-              }else{
-                console.log("tweet",tweet);
-              }
-            });
-          }
+    if(analysePart.type === "user"){
+      db.get(analysePart._id, function (err, doc){
+        if (err) {
+          db.save(analysePart._id, analysePart, function (err, res) {
+            if (err) {
+              console.log("Cannot resolve error in save",err,analysePart);
+              throw err;
+            }else{
+            callback(null, "ok");
+            }
+          });
         }else{
-          callback(null, "ok")
+          var newDoc = mergeDocs(doc, analysePart);
+          db.save(newDoc._id, newDoc, function (err, res) {
+            if (err) {
+              console.log("Cannot resolve error in save",err,analysePart);
+              throw err;
+            }else{
+            callback(null, "ok");
+            }
+          });
         }
-      }
-    });
-  });  
+      });
+    }else{
+      db.save(analysePart._id, analysePart, function (err, res) {
+        if (err) {
+          console.log("Error while save ",analysePart, err);
+          db.get(analysePart._id, function (err, doc){
+            if (err) {
+              console.log("Cannot resolve error in get",err);
+              throw err;
+            }else{
+              var newDoc = mergeDocs(doc, analysePart);
+              db.save(newDoc._id, newDoc, function (err, newres) {
+                if (err) {
+                  console.log("Cannot resolve error in save",err);
+                  throw err;
+                }else{
+                  handleRes(newres);
+                }
+              });
+            }
+          });
+        }else{
+           handleRes(res);
+        }
+        
+        function handleRes(res){
+          if(!_.isUndefined(analysePart.messagesSoFar)){
+            if(analysePart.status === "analysing"){
+              callback(null, "ok")
+              var updating = new helper.ResponseBean();
+              updating.status = "ok";
+              updating.msg = "analysing";
+              updating.id = archiveInfo._id;
+              sendJSON(request, response, updating);
+            }else if(analysePart.status === "done" && res._rev.split("-")[0]==2){
+              db.get("config", function(err, res){
+                var analyseTime = (new Date().getTime()- ptime.getTime());
+                var tweet = "after "+helper.convertMilliseconds(analyseTime).clock+" is #twapperlyzer done with "+analysePart.archive_info.keyword
+                if (res) {
+                  tweet+=" see http://"+res.standardUrl+"/#page-"+analysePart._id;
+                }
+                if(exist(request.query.mention) && request.query.mention !== "" ){
+                  tweet = "@"+request.query.mention+" "+tweet
+                }
+                if(conf.twapperlyzer.sendTweets === true ){
+                  oAuth.post("http://api.twitter.com/1/statuses/update.json", conf.twitter.accessToken, 
+                  conf.twitter.accessTokenSecret, {"status":tweet}, function(error, data) {
+                    if(error) console.log(require('sys').inspect(error));
+                  }); 
+                }else{
+                  console.log("tweet",tweet);
+                }
+              });
+            }
+          }else{
+            callback(null, "ok");
+          }
+        }
+      });
+    }
+  });
 }
 
 function mergeDocs(oldDoc, newDoc){
-  if(oldDoc.type !== "hourData" ){
-    var error = {"error":"cant merge documents with type "+oldDoc.type };
+  if(oldDoc.type !== "hourData" && oldDoc.type !== "user" && oldDoc.type !== "meta" && oldDoc.type !== "questions"){
+    var error = {"error":"cant merge documents with type "+oldDoc.type} ;
+    console.log(error);
     throw error;
   }
   
@@ -361,6 +387,17 @@ function mergeDocs(oldDoc, newDoc){
     return oldDoc;
   }
   
+  if(oldDoc.type === "user" ){
+    newDoc._rev = oldDoc._rev;
+    newDoc.archives = newDoc.archives.concat(oldDoc.archives);
+    
+    return newDoc;
+  }
+  if(oldDoc.type === "meta" || oldDoc.type === "questions"){
+    newDoc._rev = oldDoc._rev;
+    
+    return newDoc;
+  }
 }
 
 function parameterCheck(req){
@@ -400,7 +437,7 @@ function getDocID(ytkUrl, id){
 }
 
 function createBasicArchiveInfo(selectedArchive, archive){
-  var doc = new Object();
+  var doc = {};
   //doc._id = selectedArchive.ytkUrl+"/"+selectedArchive.id;
   doc._id = getDocID(selectedArchive.ytkUrl, selectedArchive.id)
   
@@ -418,7 +455,7 @@ function createBasicArchiveInfo(selectedArchive, archive){
 }
 function getDBParamsFromParams(params){
  
-  var res = new Object();
+  var res = {};
 
   var options = new Object ();
   

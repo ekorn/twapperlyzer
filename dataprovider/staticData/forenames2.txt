@@ -2346,8 +2346,7 @@ damien	m	french	4.01
 damion	m	english	0
 damodar	m	indian	0.03
 damon	m	greek mythology, english	0.03
-dan (1)	m	biblical	0
-dan (2)	m	english, romanian	0
+dan	m	english, romanian	0
 dana (1)	f	polish, czech, romanian	0
 dana (2)	m,f	english	0
 danaë	f	greek mythology	0.03

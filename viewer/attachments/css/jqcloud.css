@@ -6,6 +6,7 @@ div.jqcloud {
 }
 div.jqcloud a {
   color: inherit;
+  font-size: inherit;
   text-decoration: none;
 }
 div.jqcloud a:hover {
@@ -19,41 +20,41 @@ div.jqcloud span {
 }
 div.jqcloud span.w10 {
   font-size: 54px;
-  color: #0cf;
+  color: #00CCFF;
 }
 div.jqcloud span.w9 {
   font-size: 50px;
-  color: #0cf;
+  color: #07BCEA;
 }
 div.jqcloud span.w8 {
   font-size: 44px;
-  color: #0cf;
+  color: #0EACD4;
 }
 div.jqcloud span.w7 {
   font-size: 40px;
-  color: #39d;
+  color: #159DBF;
 }
 div.jqcloud span.w6 {
   font-size: 34px;
-  color: #90c5f0;
+  color: #1C8DA9;
 }
 div.jqcloud span.w5 {
   font-size: 30px;
-  color: #90a0dd;
+  color: #227D94;
 }
 div.jqcloud span.w4 {
   font-size: 24px;
-  color: #90c5f0;
+  color: #296D7E;
 }
 div.jqcloud span.w3 {
   font-size: 20px;
-  color: #a0ddff;
+  color: #305E69;
 }
 div.jqcloud span.w2 {
   font-size: 14px;
-  color: #99ccee;
+  color: #374E53;
 }
 div.jqcloud span.w1 {
   font-size: 10px;
-  color: #aab5f0;
+  color: #3E3E3E;
 }

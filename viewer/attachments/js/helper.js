@@ -156,7 +156,3 @@ return false;
 }
 return true;
 }
-
-function copyToClipboard (text) {
-  window.prompt ("Copy to clipboard: ", text);
-}

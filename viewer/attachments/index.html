@@ -1,8 +1,8 @@
 ﻿<!doctype html>
 <!-- Conditional comment for mobile ie7 http://blogs.msdn.com/b/iemobile/ -->
 <!-- Appcache Facts http://appcachefacts.info/ -->
-<!--[if IEMobile 7 ]>    <html class="no-js iem7" manifest="default.appcache?v=1"> <![endif]-->
-<!--[if (gt IEMobile 7)|!(IEMobile)]><!--> <html class="no-js" manifest="default.appcache?v=1"> <!--<![endif]-->
+<!--[if IEMobile 7 ]>    <html class="no-js iem7" manifest="default.appcacheFAIL"> <![endif]-->
+<!--[if (gt IEMobile 7)|!(IEMobile)]><!--> <html class="no-js" manifest="default.appcacheFAIL"> <!--<![endif]-->
 
 <head>
   <meta charset="utf-8">
@@ -38,20 +38,20 @@
   
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="css/jquery.mobile-1.0b3.min.css" type="text/css" media="screen" charset="utf-8" /> 
-  <link rel="stylesheet" href="css/style.css?v=1" type="text/css" media="screen" charset="utf-8"> 
-  <!-- <link rel="stylesheet" href="css/jquery.mobile.datebox-1.0b1.min.css" type="text/css" media="screen" charset="utf-8" />  -->
+  <link rel="stylesheet" href="css/style.css" type="text/css" media="screen" charset="utf-8"> 
   <link rel="stylesheet" href="css/jquery.mobile.simpledialog.min.css" type="text/css" media="screen" charset="utf-8" />
+  <link rel="stylesheet" href="css/mobiscroll-1.5.min.css" type="text/css" media="screen" charset="utf-8" />
+  <link rel="stylesheet" href="css/jquery.cssemoticons.css" type="text/css" media="screen" charset="utf-8" />
+  
   <link rel="stylesheet" href="css/leaflet.css" type="text/css" media="screen" charset="utf-8" />
   <link rel="stylesheet" href="css/jqcloud.css" type="text/css" />
 	<!--[if lte IE 8]><link rel="stylesheet" href="css/leaflet.ie.css" type="text/css" media="screen" charset="utf-8" /><![endif]-->
 	
-  <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
-  <script src="js/libs/modernizr-custom.js"></script>
 </head>
 
 <body>
   <div data-role="page" data-url="loadPage" id="loadPage">
-     <noscript><center><h1>Without Javascript enabled Twapperlyzer will not work.</h1></center></noscript>
+     <noscript><center><h1>Without Javascript enabled twapperlyzer will not work.</h1></center></noscript>
   </div>
 
   <!-- JavaScript at the bottom for fast page loading -->
@@ -60,40 +60,29 @@
   <!-- scripts concatenated and minified via ant build script-->
   <script type="text/javascript" src="js/mylibs/handlebars.1.0.0.beta.3.js"></script> 
   <script src="js/mylibs/leaflet-0.2.1.min.js"></script> 
-  <script src="js/mylibs/underscore-min.js"></script>
+  <script src="js/mylibs/underscore.min.js"></script>
+  <script src="js/mylibs/jquery.cssemoticons.js"></script>
+  
   <script type="text/javascript" src="js/mylibs/jquery.timeago.js"></script> 
   <script type="text/javascript" src="js/mylibs/highcharts.js"></script>
   <script type="text/javascript" src="js/mylibs/themes/grid.js"></script>
   <script type="text/javascript" src="js/mylibs/modules/exporting.js"></script>
-  <script type="text/javascript" src="js/mylibs/jqcloud-0.2.0.js"></script>
+  <script type="text/javascript" src="js/mylibs/jqcloud-0.2.4.min.js"></script>
   <script type="text/javascript" src="js/mylibs/lawnchair-0.6.1.min.js"></script> 
   <script type="text/javascript" src="js/mylibs/jquery.couch.js"></script> 
   <script type="text/javascript" src="js/mylibs/twapperlyzerApi.js"></script> 
   <script type="text/javascript" src="js/mylibs/jquery.mobile-1.0b3.min.js"></script> 
+  <script type="text/javascript" src="js/mylibs/jquery.mobile.simpledialog.min.js"></script>
+  <script type="text/javascript" src="js/mylibs/mobiscroll-1.5.min.js"></script>
   <script src="js/mylibs/helper.js"></script> 
   <script src="js/plugins.js"></script> 
   <script src="js/helper.js"></script> 
   <script src="js/visualisations.js"></script> 
   <script src="js/script.js"></script> 
 
-  <script type="text/javascript" src="js/mylibs/jquery.mobile.simpledialog.min.js"></script>
-  <!-- end concatenated and minified scripts-->
-  <!--<script type="text/javascript" src="js/mylibs/jquery.mobile.datebox-1.0b1.min.js"></script>-->
-
-  <script>
-    $.mobile.pushStateEnabled = false;
-    // iPhone Scale Bug Fix, read this when using http://www.blog.highub.com/mobile-2/a-fix-for-iphone-viewport-scale-bug/
-    MBP.scaleFix();
-    
-    // Media Queries Polyfill https://github.com/shichuan/mobile-html5-boilerplate/wiki/Media-Queries-Polyfill
-    
-    yepnope({
-      test : Modernizr.mq('(min-width)'),
-      nope : ['js/libs/respond.min.js']
-    });
-    
-  </script>
   
+  <!-- end concatenated and minified scripts-->
+
 <script id="page" type="text/html">
   <div data-role="page" class= " bg "  id="{{pageId}}" data-url="{{pageId}}" >
     {{> header}}
@@ -160,7 +149,7 @@
         
         <div  data-role="fieldcontain" >
           <label for="ytkURLSelect">or choose from the list:</label>
-          <select name="ytkURLSelect" id="ytkURLSelect">
+          <select name="ytkURLSelect" id="ytkURLSelect" >
           </select>
         </div>
         
@@ -172,34 +161,36 @@
         
         <div  data-role="fieldcontain" >
           <label for="dataProviderSelect">or choose from the list:</label>
-          <select name="dataProviderSelect" id="dataProviderSelect">
+          <select name="dataProviderSelect" id="dataProviderSelect" >
           </select>
         </div>
         
+        
+        
         <button type="submit" >Submit</button>
       </form>
-
+<input type="text" name="date33" value="start" id="date33" class="mobiscroll" />
       <button id="clearUserConfigButton" >Clear user config</button>
   </div>
 </script>
 
 <script id="listContent" type="text/html">
-  <div data-role="content" >
+<div data-role="content" >
     <ul data-role="listview" data-filter="true" id="{{listId}}" orderType="" >
     
     </ul>
-  </div>
+</div>
 </script>
 
 <script id="archivePageContent" type="text/html">
   <div data-role="content" >
-    <div class = "ui-bar-b ui-corner-top ui-corner-bottom ui-shadow" id="archieInfo-{{archive._id}}">
-      <center>
+    <div class = "ui-bar-b ui-corner-top ui-corner-bottom ui-shadow center-wrapper" style="padding:10px;" id="archieInfo-{{archive._id}}">
+
         <p>{{archive.archive_info.description}}</p>
         <p>Collecting since {{formatEpochTimeToFuzzy archive.archive_info.create_time}}</p>
-        <p>Total number of tweets = <strong id="currentArchiveCount-{{archive._id}}">{{archive.archive_info.count}}</strong></p>
+        <p>Tweets = <strong id="currentArchiveCount-{{archive._id}}">{{archive.archive_info.count}}</strong></p>
         <p id="analyseProgress-{{archive._id}}">updating archive <progress  ></progress></p>
-      </center>
+        <div id="dynamicArchieInfo-{{archive._id}}" ></div>
     </div>
     {{>widgetList}}
   </div>
@@ -221,46 +212,69 @@
 <script id="widgetListTemplate" type="text/html">
   
     <ul data-role="listview" data-inset="true" id="archiveWidgetsList-{{archive._id}}">
+      <li data-role="list-divider"> Overview </li>
+      <li>
+        <a href="#archiveGrowthPage-{{archive._id}}"> 
+        <h3>Growth</h3> 
+        <p>Showing the community development.</p> 
+        </a>
+      </li>
       <li data-role="list-divider"> Contend </li>
       <li>
-        <a href="#archiveHashtagsPage-{{archive._id}}"> 
+        <a href="#archiveHashtagsPage-{{archive._id}}?vis=cloud"> 
         <h3>Hashtags</h3> 
-        <p>Show all hashtags used in this archive </p> 
+        <p>Show used hashtags.</p> 
+        </a>
+      </li>
+      <li>
+        <a href="#archiveKeywordsPage-{{archive._id}}?vis=cloud"> 
+        <h3>Keywords</h3> 
+        <p>Some Keywords used in this archive.</p> 
         </a>
       </li>
       <li>
         <a href="#archiveLinksPage-{{archive._id}}"> 
         <h3>Urls</h3>
-        <p> Shows the expanded urls</p>
+        <p> Shows the expanded urls.</p>
         </a>
       </li>
       <li>
         <a href="#showMsgsPage-{{archive._id}}">
           <h3>Messages</h3>
-          <p>Browse the messages in anti-chronologic order</p>
+          <p>Browse the messages in anti-chronologic order.</p>
         </a>
       </li>
         
       <li data-role="list-divider"> Member </li>
       <li>
-        <a href="#archiveMentionsPage-{{archive._id}}"> 
+        <a href="#archiveMembersPage-{{archive._id}}?vis=cloud"> 
+        <h3>User</h3> 
+        <p>Show the user that form this Community </p>
+        </a>
+      </li>
+      <li>
+        <a href="#archiveRetweeterPage-{{archive._id}}?vis=cloud"> 
+        <h3>Retweeter</h3> 
+        <p>Show the users by retweets.</p>
+        </a>
+      </li>
+      <li>
+        <a href="#archiveMentionsPage-{{archive._id}}?vis=cloud"> 
         <h3>Mentions</h3> 
-        <p>Show the user mentioned in this archive </p>
+        <p>Show the user mentioned in this archive. </p>
         </a>
       </li>
       <li>
         <a href="#archiveQuestionsPage-{{archive._id}}?type=goodAnswered"> 
         <h3>Questions</h3> 
-        <p>Questions raised in this community</p>
+        <p>Questions raised in this community.</p>
         </a>
       </li>
-      <li><a href="#archiveMembersPage-{{archive._id}}"> Placeholder </a></li>
-
       <li data-role="list-divider"> Geo Informations </li>
       <li>
         <a href="#mapPage-{{archive._id}}" >
           <h3>Map</h3> 
-          <p>Show Geo tagged messages on a map</p>
+          <p>Show Geo tagged messages on a map.</p>
         </a>
       </li>
     </ul>
@@ -400,14 +414,43 @@
 
 <script id="navbarMemberFooter"  type="text/html">
   <div data-role="footer"  data-position="fixed">
-    <div class="nav-archive-list" data-role="navbar" >
+    <div data-role="navbar" >
       <ul>
-        <li><a href="#" onclick='' class="ui-btn-active">All </a></li>
-        <li><a href="#" onclick='' >VIP</a></li>
-        <li><a href="#" onclick='' >Mentions</a></li>
-        <li><a href="#" onclick='getRTInfo()' >RT</a></li>
-        <li><a href="#" onclick='getQuestionerInfo()' >Questioner</a></li>
+        <li><a href="#" onclick='' class="ui-btn-active"><<</a></li>
+        <li><a href="#" onclick='' >Month</a></li>
+        <li><a href="#" onclick='' >Day</a></li>
+        <li><a href="#" onclick='' >Hour</a></li>
+        <li><a href="#" onclick='getRTInfo()' >>></a></li>
       </ul>
+    </div><!-- /navbar -->
+  </div><!-- /footer -->
+</script>
+
+<script id="navbarVisulasiationFooter"  type="text/html">
+  <div data-role="footer"  >
+    <div data-role="navbar" type="steper">
+      <ul>
+        <li><a href="#" onclick='step("#{{pageId}}", "previous")' ><=</a></li>
+        <li><a href="#" onclick='step("#{{pageId}}","forward")' >=></a></li>
+      </ul>
+    </div><!-- /navbar -->
+    <div data-role="navbar" type="time">
+      <ul>
+        <li><a href="#" onclick='timestep("#{{pageId}}","2592000")' >Month</a></li>
+        <li><a href="#" onclick='timestep("#{{pageId}}","86400")' >Day</a></li>
+        <li><a href="#" onclick='timestep("#{{pageId}}","3600")' >Hour</a></li>
+        <li><a href="#" onclick='timestep("#{{pageId}}","total")' class="ui-btn-active" >Total</a></li>
+      </ul>
+    </div><!-- /navbar -->
+    <div data-role="navbar" type="form">
+      <ul>
+        <li><a href="#"  onclick='changeView("#{{pageId}}","cloud")' class="ui-btn-active">Cloud</a></li>
+        <li><a href="#" onclick='changeView("#{{pageId}}","list")' >List</a></li>
+        <li><a href="#" onclick='changeView("#{{pageId}}","period")' >Set period</a></li>
+      </ul>
+        <input type="text" name="{{pageId}}-startDate" id="{{pageId}}-startDate" class="mobiscroll" value="" style="display: none; " />
+        <input type="text" name="{{pageId}}-endDate" id="{{pageId}}-endDate" class="mobiscroll" value="" style="display: none; " />
+
     </div><!-- /navbar -->
   </div><!-- /footer -->
 </script>

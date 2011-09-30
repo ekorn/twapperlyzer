@@ -5,8 +5,10 @@ _.mixin(require('underscore.string'));
 // expand an URL
 var UrlExpander = require('url-expander');
 var natural = require('natural');
-var names;
-getNamesToGender('./staticData/forenames2.txt', function(namesFromFile){names = namesFromFile});
+var femaleNames = [];
+var maleNames = [];
+readNames("./staticData/female.txt", function(names){femaleNames = names;});
+readNames("./staticData/male.txt", function(names){maleNames = names;});
 var conf = require('config');
 var keywords = require("./keywords.js");
 rest = require('restler');
@@ -17,7 +19,7 @@ var oAuth= new OAuth("http://twitter.com/oauth/request_token",
                  conf.twitter.consumerKey,  conf.twitter.consumerSecret, 
                  "1.0A", null, "HMAC-SHA1");
 
-var currentDate = 0;
+
 var oneDay = 86400;
 var oneHour = 3600;
 var regExUsernames = /(^|\s)@(\w+)/g;
@@ -37,6 +39,7 @@ function analyseMesseges(archiveInfo, callback){
   delete archiveInfo.questionsDoc;
   var tmpUsernames =[]; //List of all Users of this Analyse 
   var alchemyapi = conf.twapperlyzer.alchemyapi !== "";
+  var currentDate = 0;
   var hoursSaved = 0;
   var totalHours =0;
   var totalProgress = [];
@@ -55,11 +58,8 @@ function analyseMesseges(archiveInfo, callback){
       analyseDone(metaArchiveInfo,callback);
     }
   });
-  
   _.each(archiveInfo.tweets.reverse(), function(message){
-    
-    //The division by 100, cut the two trailing zeros, just for saving traffic for the client
-    var date = getNormalisedDate(message.time)//100;
+    var date = getNormalisedDate(message.time)
     msgByDate = aggrigateData(msgByDate, [date]);// Save the amount of tweets per hour and the normalised time(hour)
     
     //The Object for the hour
@@ -298,7 +298,7 @@ function analyseMesseges(archiveInfo, callback){
   if(doAsync){
     //Getting User Info From twitter
     var uniqUsers = _.uniq(tmpUsernames);
-    getUserInfo(uniqUsers,callback, function(err,res){
+    getUserInfo(uniqUsers,[archiveInfo._id,archiveInfo.archive_info.keyword],callback, function(err,res){
       totalProgress.push("users");
       if (err)  console.log("error while saving users. ", totalProgress, err);
       else console.log("users saved. ", totalProgress);
@@ -363,18 +363,25 @@ function analyseMesseges(archiveInfo, callback){
   function saveTheHour(hour, save){
     hour.type = "hourData";
     hour._id = archiveInfo._id+"-"+hour.text
-    
+    //console.log("try to save "+hoursSaved+" hours of "+totalHours);
     save(null, hour, function(err, res){
       hoursSaved++;
       //console.log("saved "+hoursSaved+" hours of "+totalHours, res);
       if(hoursSaved === totalHours){
         totalProgress.push("hours");
         console.log(hoursSaved+" hours saved.", totalProgress);
+        
         if(totalProgress.length === allDone){
           analyseDone(metaArchiveInfo,save);
         }
       }
     });
+  }
+  function getNormalisedDate(epoch){
+    if(epoch > currentDate + oneHour){
+      currentDate = epochYMD(epoch);
+    }
+    return currentDate;
   }
 }
 
@@ -556,7 +563,7 @@ function getGeoMarkerFromMessage(message, geoMarkerSoFar){
 //https://dev.twitter.com/docs/api/1/get/users/lookup
 //http://api.twitter.com/1/users/lookup.xml?screen_name=usernameA,usernameB,... max 20
 //http://api.twitter.com/1/users/lookup.xml?user_id=99723,92162698,12854372&screen_name=rsarver,wilhelmbierbaum
-function getUserInfo(users,save, callback){
+function getUserInfo(users,laid,save, callback){
   var userlist = "";
   var sendCounter =0;
   var errors=[];
@@ -582,7 +589,7 @@ function getUserInfo(users,save, callback){
           }
           else{
             sendCounter++;
-            saveUsers(data, save, function(){
+            saveUsers(data,laid, save, function(){
               sendCounter--;
               if(sendCounter === 0){
                 if(errors.length === 0){
@@ -598,18 +605,22 @@ function getUserInfo(users,save, callback){
 
   
 }
-function saveUsers(users, save, callback){
+
+function saveUsers(users,laid, save, callback){
   var finalUsers = [];
   _.each(users, function(userdata){
     var userinfo = {};
-
+    //ytk Archive 
+    userinfo.archives = [laid];
+    
     //General Info
     userinfo._id = ""+userdata.id;
+    
     userinfo.type = "user";
     userinfo.name = userdata.name;
     userinfo.screen_name = userdata.screen_name;
     userinfo.url = userdata.url;
-    userinfo.gender = getGender(names, userdata.name);
+    userinfo.gender = getGender(femaleNames, maleNames, userdata.name);
     
     
     //Geo Info
@@ -653,8 +664,14 @@ function fetchUserData(users,callback){
   
 }
 
-function getGender(namesdb, name){
+function getGender2(name){
+  return getGender(femaleNames, maleNames, name);
+}
+
+function getGender(femaleNames, maleNames, name){
+  //split by the obvious delimiter
   var parts = _.words(name, delimiter=/[ _,-]/);
+  //if that did not wor try to deCamelCase
   if(parts.length == 1){
     parts = name.replace(/([A-Z]+)/g, '_$1').replace(/^_/, '').split("_");
   }
@@ -679,11 +696,18 @@ function getGender(namesdb, name){
     }
   }else{
   */
-    var genderIndicator = _.detect(parts, function(part){
-      return (!_.isUndefined(namesdb[part]) && namesdb[part] != "m,f")
-    })
-    if(!_.isUndefined(genderIndicator)){
-        gender = namesdb[genderIndicator];
+    //The first name that is in the db is returned
+    for (var i = 0, l = parts.length; i < l; i++) {
+      var index =  _.indexOf(maleNames, parts[i], true);
+      if (index !== -1){
+        gender = "m";
+        break;
+      }
+      var index =  _.indexOf(femaleNames, parts[i], true);
+      if (index !== -1){
+        gender = "f";
+        break;
+      }
     }
   //}
   return gender;
@@ -702,30 +726,15 @@ function clear(oldVar){
   }
 }
 
-function getNamesToGender(fileName, callback){
-  var names = new Object;
-  var stream = fs.createReadStream(fileName);
-  var header = null;
 
+function readNames(fileName, callback){
+  var res = [];
 
   fs.readFile(fileName, function (err, data) {
-    if (err) throw err;
-    
-    var lines = _.lines(data.toString());
-    if(_.isNull(header)){
-      header = _.words(lines.shift(), delimiter="\t");
-    }
-    _.each(lines, function(line){
-      if(line != ""){
-        var parts =_.words(line, delimiter="\t");
-        if(parts[1] != "m,f")
-          names[parts[0]] = parts[1];
-      }
-    });
-    callback(names);
+      if (err) throw err;
+      callback(_.lines(data.toString()));
   });
 }
-
 
 
 function rateAnswer(question, message, tmpMetaInfo, username){
@@ -761,12 +770,7 @@ function rateAnswer(question, message, tmpMetaInfo, username){
     return res;
 }
 
-function getNormalisedDate(epoch){
-  if(epoch > currentDate + oneHour){
-    currentDate = epochYMD(epoch);
-  }
-  return currentDate;
-}
+
 
 function epochYMD(epoch){
   var date = new Date(epoch * 1000)
@@ -793,4 +797,6 @@ exports.aggrigateAggrigatedData = aggrigateAggrigatedData;
 exports.aggrigateData = aggrigateData;
 exports.analyseMesseges = analyseMesseges;
 exports.getUserInfo = getUserInfo;
-exports.getNamesToGender = getNamesToGender;
+exports.maleNames = maleNames;
+exports.femaleNames = femaleNames;
+exports.getGender2 = getGender2;

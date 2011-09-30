@@ -120,6 +120,7 @@ helper.getDBConnectionFromConfig(conf.couchdb, function(error, database, connect
     conn = connection;
     db  = database;
     
+    /*
     // Save User conflict test
     db.save(hourDoc._id, hourDoc, function(err,res){
       if(err) {
@@ -137,7 +138,7 @@ helper.getDBConnectionFromConfig(conf.couchdb, function(error, database, connect
       console.log("res",res);
       }
     });
-     
+     */
     
         /*GET Mutible Docs test
     var id="29863de6315290d576d34e93d122c944-1"
@@ -268,3 +269,12 @@ res2.terms = keywords.filterStopwords(addres2.languagesFromText[0][0], res2.term
 //console.log("res2",res2);
 */
 
+
+
+function testName(){
+  var name = "philippMayr";
+  var res = analyser.getGender2(name);
+  console.log(name + " is " + res);
+}
+
+setTimeout(testName, 2000);

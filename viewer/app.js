@@ -6,6 +6,7 @@ ddoc =
   { _id:'_design/twapperlyzer'
   , rewrites : 
     [ {from:"/", to:'index.html'}
+    , {from:"default.appcache", to:'_show/cache'}
     , {from:"/api", to:'../../'}
     , {from:"/dbname/*", to:'../../*'}
     , {from:"/api/*", to:'../../*'}
@@ -175,6 +176,79 @@ ddoc.lists.aggrigateLimit25 = function(head, req){
   send(toJSON(agg.slice(0,25)));
 }
 
+ddoc.lists.gender = function(head, req){
+  var row;
+  var docs = [];
+  while(row = getRow()) {
+    docs.push(row.value);
+  }
+  
+  var res = {male:0,female:0,neutral:0};
+  docs.forEach(function(user){
+    if(user.gender === "m")
+      res.male++;
+    if(user.gender === "f")
+      res.female++;
+    if(user.gender === "m,f")
+      res.neutral++;
+  });
+  return toJSON(res);
+  
+}
+
+ddoc.lists.totalByDay = function(head, req){
+  var row;
+  var docs = [];
+  while(row = getRow()) {
+    docs.push(row);
+  }
+  var res = {
+        from:0,
+        msg:0, 
+        rt: 0,
+        un: 0
+  };
+  var resArray = [];
+  var oneDay = 86400;
+  to = docs[0].key[1]+ oneDay;
+  res.from = docs[0].key[1];
+  
+  var userList = [];
+  
+  docs.forEach(function(entry){
+    //Append every enty of a day
+    if(entry.key[1]<to){
+      res.msg += entry.value.msg;
+      res.rt += entry.value.rt;
+      res.un += getUniqueUser(entry.value.un).length;
+    }else{
+      //start a new day
+      resArray.push(res);
+      res = {
+          from: entry.key[1],
+          msg: entry.value.msg,
+          rt: entry.value.rt,
+          un: getUniqueUser(entry.value.un).length
+        };
+      to = entry.key[1] + oneDay;
+    }
+  });
+  
+  function getUniqueUser(users){
+    var res = [];
+    users.forEach(function(user){
+      if(userList.indexOf(user.text) === -1){
+        userList.push(user.text);
+        res.push(user.text)
+      }
+    });
+    return res;
+  }
+  return toJSON(resArray);
+  
+}
+
+//VIEWS
 ddoc.views = {};
 
 
@@ -329,79 +403,89 @@ ddoc.views.user = {
   }
 }
 
-
-/*
-ddoc.views.male = {
+ddoc.views.archiveUser = {
   map: function(doc) {
-    if(doc.type === "user"){
-      if(doc.gender === "m")
-        emit(doc.screen_name, 1);
+    if(doc.type === "user"){ 
+        doc.archives.forEach(function(archive){
+          emit(archive[0], doc);
+        });
     }
-  },
-  reduce: "_count"
-}
-
-ddoc.views.female = {
-  map: function(doc) {
-    if(doc.type === "user"){
-      if(doc.gender === "f")
-        emit(doc.screen_name, 1);
-    }
-  },
-  reduce: "_count"
-}
-
-ddoc.views.unknownGender = {
-  map: function(doc) {
-    if(doc.type === "user"){
-      if(doc.gender === "m,f")
-        emit([doc.screen_name, doc.name], 1);
-    }
-  },
-  reduce: "_count"
-}
-
-ddoc.views.gender = {
-  map: function(doc) {
-    if(doc.type === "user"){
-        emit([doc.screen_name, doc.name], doc.gender);
-    }
-  },
-  reduce: function (key, values, rereduce){
-    var res = {"male":0,"female":0, "total":values.length};
-    values.forEach(function(value){
-      if(value === "m")
-        res.male++;
-      if(value === "f")
-        res.female++;
-    });
-    return res;
   }
 }
 
-ddoc.views.countUser = {
-  map: function(doc) {
-    if(doc.type === "user"){
-        emit([doc.screen_name], 1);
+ddoc.views.grandTotal = {
+  map: function (doc) {
+    if(doc.type === "hourData"){
+      var meta = doc._id.split("-");
+      var res = {
+        msg:doc.weight,
+        rt: doc.rt,
+        un: doc.un
+      }
+      emit([meta[0]+"-"+meta[1], parseInt(doc.text)], res);
     }
-  },
-  reduce: "_count"
+  }
+  /*
+  ,reduce: function (key, values, rereduce){
+      var res = {
+        msg:0, 
+        ht:0, 
+        keywords:0,
+        rt: 0,
+        me:0,
+        //sentiment: doc.sentiment,
+        //language: doc.language,
+        urls: 0
+      }
+    values.forEach(function(value){
+      res.msg += value.msg;
+      res.ht += value.ht;
+      res.me += value.me;
+      res.keywords += value.keywords;
+      res.rt += value.rt;
+      res.urls += value.urls;
+    });
+    
+    return res;
+  }
+  * */
 }
 
-ddoc.views.reach = {
+ddoc.views.config = {
   map: function(doc) {
-    if(doc.type === "user"){
-        emit(doc.screen_name, doc.followers_count);
+    if(doc.type === "config"){ 
+        emit(doc.type, doc);
     }
-  },
-  reduce: "_sum"
+  }
 }
-*/
 
-  //
-//http://localhost:5984/twapperlyzer2/_design/twapperlyzer/_view/language?startkey=%221299780000%22&endkey=%221308067200%22&startkey_docid=29863de6315290d576d34e93d122c944-1-1299780000&endkey_docid=29863de6315290d576d34e93d122c944-1-1308067200
+ddoc.views.questions = {
+  map: function(doc) {
+    var meta = doc._id.split("-");
+    if(doc.type === "questions"){ 
+        emit(meta[0]+"-"+meta[1], doc);
+    }
+  }
+}
 
 ddoc.shows = {};
+
+ddoc.shows.cache = function(head, req) {
+  var manifest = "";
+  var network = "NETWORK:\n";
+  for (var a in this._attachments) {
+    if(a.indexOf("js") === -1)
+      manifest += ("/" + a + "\n");
+    else
+      network += ("/" + a + "\n");
+  }
+  manifest += network;
+  var r =
+    { "headers": { "Content-Type": "text/cache-manifest"}
+    , "body": "CACHE MANIFEST\n" + manifest
+    }
+  return r;
+}
 
 ddoc.shows.questions = function(doc ,req) {
   var allAnswered = [];
