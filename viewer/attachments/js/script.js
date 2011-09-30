@@ -97,7 +97,13 @@ $(document).bind( "pagebeforechange", function( e, data ) {
             if(page === '#listArchivesPage'){
               $.mobile.changePage($(page),data.options);
             }else{
-              $.mobile.changePage($(data.toPage),data.options);
+              //console.log("URL Routing", page, data.toPage);
+              var newTarget = data.toPage;
+              if(data.toPage !== page){
+                if(data.toPage.indexOf("#page-") !== -1)
+                  newTarget = page;
+              }
+              $.mobile.changePage($(newTarget),data.options);
             }
           });
         }else{ //it is in the DOM 
@@ -106,7 +112,7 @@ $(document).bind( "pagebeforechange", function( e, data ) {
             document.location.hash = "#"+data.options.dataUrl.split("#")[1];
             queryHandler(data.toPage);
           }else{
-            //console.log($.mobile.activePage.attr("id")," from, nothing to do just let it path to",data.toPage);
+            console.log($.mobile.activePage.attr("id")," from, nothing to do just let it path to",data.toPage);
           }
         }
       }
@@ -143,7 +149,7 @@ createPages();
 
   //list Archives Page 
   $('#listArchivesPage').live('pagebeforeshow',listArchivesPageHandler);
-  $('#archivesList').delegate('a', 'click', selectedArchiveByList);
+  //$('#archivesList').delegate('a', 'click', selectedArchiveByList);
 
   
   $("#debugButton").click(function(){
@@ -679,17 +685,22 @@ function generateArchiveList(parent, archiveList,localArchiveList, orderType){
 }
 
  /**
- * Get the archive id from the li and create the selectedArchive object.
- * This function is called before the handleShowArchivePage function. 
+ * DEPRECATED since new dynamic page injection
  *
  */
 function selectedArchiveByList(event) {
   event.preventDefault();
   event.stopPropagation();
+  
   var target = $(this).attr("href");
   var targetParts = target.split("#page-");
-  if( $(target) === []){
-    createArchivePage(targetParts[1], function(page){$.mobile.changePage(page);});
+  console.log("selectedArchiveByList",target, $(target));
+  if( $(target).length === 0){
+    console.log("WTF");
+    createArchivePage(targetParts[1], function(page){
+      console.log("going to ",page);
+      $.mobile.changePage(page);
+      });
     
   }else{
     twapperSession.laid = targetParts[1];
@@ -702,6 +713,7 @@ function createArchivePage(requestedLaid, callback){
   var hashId = requestedLaid.split("-");
   
   twapperSession.laid = requestedLaid;
+  //console.log("createArchivePage", requestedLaid, callback);
   if(twapperSession.lastLaid != twapperSession.laid){
     mydb.openDoc( requestedLaid,  
       {success: function(data) {
@@ -785,6 +797,8 @@ function changeTargets(){
 }
 
 function setData(data,callback){
+  //console.log("looking for "+'#page-'+data._id, callback);
+  
   if($('#page-'+data._id).length === 0){
     twapperSession.archives[data._id] = data;
     var laid = data._id;
@@ -794,13 +808,13 @@ function setData(data,callback){
   Handlebars.registerPartial('content', twapperSession.templates.archivePageContent);
   Handlebars.registerPartial('widgetList', twapperSession.templates.widgetListTemplate);
   
-  Handlebars.registerPartial('footer', twapperSession.templates.navbarSingleButtonFooter);
+  Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
   
   var archivePageData = {
     "pageId":"page-"+data._id, 
     "pageHeader": "Archive: "+data.archive_info.keyword,
     "target": "javascript:changeTargets()",
-    "footerButtonText":"please ignore me",
+    //"footerButtonText":"please ignore me",
     "archive": data
     };
   $.mobile.pageContainer.append(twapperSession.templates.page(archivePageData));
@@ -1207,7 +1221,7 @@ function resetNavStore(navStore){
 
 function queryHandler (page){
   pageParts = page.split("-");
-  //console.log("WHAT now", page, pageParts, $_GET);
+  console.log("WHAT now", page, pageParts, $_GET);
   switch(pageParts[0]){
     case "#archiveGrowthPage" :
     
@@ -1262,13 +1276,17 @@ function setParams(page, name, laid){
   //Case the total for the archive is requested
   if(
      ($_GET.from == twapperSession.archives[laid].timeStats.min &&  
-      $_GET.to == twapperSession.archives[laid].timeStats.max))
+      $_GET.to == twapperSession.archives[laid].timeStats.max)
+      ||($_GET.from = 0 && $_GET.to == {})
+      )
     {
 
     if(_.isUndefined(twapperSession.archives[laid][name].total)){
+      console.log("Werte",$_GET.from, $_GET.to, twapperSession.archives[laid].timeStats.min, twapperSession.archives[laid].timeStats.max);
       getAggrigatedData(name,laid,twapperSession.archives[laid].timeStats.min,twapperSession.archives[laid].timeStats.max, function(err, res){
         if (err) console.log("Error while fetching "+name,err);
         if(res) {
+          console.log("total",res);
           twapperSession.archives[laid][name].total = res;
           setVis(twapperSession.archives[laid][name].total);
         }
@@ -1716,6 +1734,9 @@ function createSelectedArchiveObject(array){
 }
 
 function getAggrigatedData(view,laid,sk,ek, callback){
+  if(!_.isEmpty(ek)){ 
+    ek = Number(ek);
+  }
   mydb.list("twapperlyzer/aggrigate",view, {
       success: function(data) {
         callback(null,data);
@@ -1726,7 +1747,7 @@ function getAggrigatedData(view,laid,sk,ek, callback){
       //"startkey":[laid, 0],
       //"endkey":[laid,{}]
       "startkey":[laid,Number(sk)],
-      "endkey":[laid,Number(ek)]
+      "endkey":[laid,ek]
     }
   );
 }

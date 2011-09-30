@@ -389,8 +389,11 @@ function mergeDocs(oldDoc, newDoc){
   
   if(oldDoc.type === "user" ){
     newDoc._rev = oldDoc._rev;
-    newDoc.archives = newDoc.archives.concat(oldDoc.archives);
-    
+    if(!(_.detect(oldDoc.archives, function(archive){
+      return archive[0] === newDoc.archives[0][0];
+    }))){
+      newDoc.archives = newDoc.archives.concat(oldDoc.archives);
+    }
     return newDoc;
   }
   if(oldDoc.type === "meta" || oldDoc.type === "questions"){
