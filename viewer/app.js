@@ -515,6 +515,7 @@ ddoc.shows.questions = function(doc ,req) {
   }
     
   doc.questions.forEach(function(question){
+    //Fix for automatic replacement 
     question.text = question.text.replace(/&quot;/g,'"');
     addToArray(questioner, question.from_user);
     delete question.metaData;
@@ -523,13 +524,17 @@ ddoc.shows.questions = function(doc ,req) {
     }else{
       allAnswered.push(question);
       var betterAnswers = [];
+      //Lets see if there a some good answers.
       question.answers.forEach(function (anwser){
         anwser.text = anwser.text.replace(/&quot;/g,'"');
+        //Fill the responder with another user
         addToArray(responder, anwser.from_user);
+        //if it has more in commen than just the language is is a better answer. 
         if(anwser.weight > 0.5){
           betterAnswers.push(anwser)
         }
       });
+      //if there has been some good answers
       if(betterAnswers.length >0){
         question.answers = betterAnswers;
         goodAnswered.push(question);

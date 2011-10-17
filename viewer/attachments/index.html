@@ -188,7 +188,7 @@
 
         <p>{{archive.archive_info.description}}</p>
         <p>Collecting since {{formatEpochTimeToFuzzy archive.archive_info.create_time}}</p>
-        <p>Tweets = <strong id="currentArchiveCount-{{archive._id}}">{{archive.archive_info.count}}</strong></p>
+        <p><strong id="currentArchiveCount-{{archive._id}}">{{archive.archive_info.count}}</strong> Tweets</p>
         <p id="analyseProgress-{{archive._id}}">updating archive <progress  ></progress></p>
         <div id="dynamicArchieInfo-{{archive._id}}" ></div>
     </div>
@@ -219,7 +219,7 @@
         <p>Showing the community development.</p> 
         </a>
       </li>
-      <li data-role="list-divider"> Contend </li>
+      <li data-role="list-divider"> Content </li>
       <li>
         <a href="#archiveHashtagsPage-{{archive._id}}?vis=cloud"> 
         <h3>Hashtags</h3> 
@@ -229,7 +229,7 @@
       <li>
         <a href="#archiveKeywordsPage-{{archive._id}}?vis=cloud"> 
         <h3>Keywords</h3> 
-        <p>Some Keywords used in this archive.</p> 
+        <p>Some keywords used in this archive.</p> 
         </a>
       </li>
       <li>
@@ -241,15 +241,15 @@
       <li>
         <a href="#showMsgsPage-{{archive._id}}">
           <h3>Messages</h3>
-          <p>Browse the messages in anti-chronologic order.</p>
+          <p>Browse the messages in reverse chronological order.</p>
         </a>
       </li>
         
-      <li data-role="list-divider"> Member </li>
+      <li data-role="list-divider"> Members </li>
       <li>
         <a href="#archiveMembersPage-{{archive._id}}?vis=cloud"> 
-        <h3>User</h3> 
-        <p>Show the user that form this Community </p>
+        <h3>Users</h3> 
+        <p>Show the user that form this community. </p>
         </a>
       </li>
       <li>
@@ -261,7 +261,7 @@
       <li>
         <a href="#archiveMentionsPage-{{archive._id}}?vis=cloud"> 
         <h3>Mentions</h3> 
-        <p>Show the user mentioned in this archive. </p>
+        <p>Show the users mentioned in this archive. </p>
         </a>
       </li>
       <li>
@@ -274,7 +274,7 @@
       <li>
         <a href="#mapPage-{{archive._id}}" >
           <h3>Map</h3> 
-          <p>Show Geo tagged messages on a map.</p>
+          <p>Show geotagged messages on a map.</p>
         </a>
       </li>
     </ul>
@@ -353,19 +353,27 @@
 <div data-role="content" >
   <div class="center-wrapper"> <img src="img/logo3-withAspect.svg" alt="logo" ></div>
 
-  <p>This project was created at the <a href="http://ddi.uni-paderborn.de/en" target="_blank" >DDI</a> 
-  of the <a href="http://www.uni-paderborn.de/en/" target="_blank" >University of Paderborn</a>. 
-  The aim is to anlayse <a href="http://twitter.com" target="_blank" >Twitter</a> messages 
-  archived by a instance of <a href="http://code.google.com/p/yourtwapperkeeper/" target="_blank" >YourTwapperkeeper</a>.
+  <p>The Twapperlyzer project was created at the <a href="http://ddi.uni-paderborn.de/en" target="_blank" >Computer Science Education group</a> at the <a href="http://www.uni-paderborn.de/en/" target="_blank" >University of Paderborn</a> (Germany). 
+  The aim is to analyze <a href="http://twitter.com" target="_blank" >Twitter</a> messages archived in any instance of <a href="http://code.google.com/p/yourtwapperkeeper/" target="_blank" >yourTwapperkeeper</a>.   
+  
+ 
   </p>
-  <p> It is split into two functional modules the dataprovider and the viewer. </p>
-  <ul>
-    <li>The dataprovider downloads the messages from a YourTwapperkeeper 
-    instance and gather additional information from other sources. Afterwards it aggregate 
-    the data and save it into a <a href="http://couchdb.org" target="_blank" >couchDB</a> instance. More information about the dataprovider you find at the <a href="http://{{dataproviderUrl}}" target="_blank" >API documentation</a></li> 
-    <li>The viewer is a <a href="http://couchapp.org" target="_blank" >couchapp</a> that allow you to replicate to your own Couchdb. This enables you to view all analysis that don't require additional data from the Internet</li>
-  </ul>  
-  <p> For this twapperkeeper instance is <a href="mailto:{{adminEmail}}?subject=twapperlyzer%20request">{{adminName}}</a> responsible.
+  <p> Twapperlyzer is split into two functional modules: 1) the data provider and 2) the viewer.  </p>
+  <ol>
+    <li>
+      The data provider downloads the messages from a YourTwapperkeeper 
+      instance and gathers additional information from other sources like 
+      <a href="http://www.alchemyapi.com/" target="_blank" >alchemyapi.com</a> and <a href="http://tweetsentiments.com/" target="_blank" >tweetsentiments.com</a>. 
+      Afterwards it aggregates the data and saves them in a <a href="http://couchdb.org" target="_blank" >CouchDB</a> instance. 
+      More information about the data provider can be found in the <a href="http://{{dataproviderUrl}}" target="_blank" >API documentation</a>.
+    </li> 
+    <li>
+      The viewer is a <a href="http://couchapp.org" target="_blank" >couchapp</a> that is replicatable to your own CouchDB. 
+      This enables you to view all analyses that don't require additional data from the internet.
+    </li>
+  </ol>  
+  <p> <a href="mailto:{{adminEmail}}?subject=twapperlyzer%20request">{{adminName}}</a> is responsible for  this Twapperlyzer instance.  
+  The project was carried out under supervision of Wolfgang Reinhardt.
 </div> 
 
 </script>

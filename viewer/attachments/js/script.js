@@ -1121,7 +1121,7 @@ function getDynamicArchieInfo(){
       success: function(rtcount) {
         rtcount = rtcount.rows[0].value;
         tweetcount = Number($("#currentArchiveCount-"+laid).text());
-        var line = "<p>Retweets = "+rtcount+" ("+Math.round(rtcount/(tweetcount/100))+"%)</p>";
+        var line = "<p>"+rtcount+" Retweets ("+Math.round(rtcount/(tweetcount/100))+"%)</p>";
         $("#dynamicArchieInfo-"+laid).append($(line).hide().fadeIn(1000));
         //$('#currentArchiveCount-'+laid).text(msg+", Retweets = "+data.rows[0].value+" ("+Math.round(data.rows[0].value/(msg/100))+"%)");
       },
@@ -1157,7 +1157,7 @@ function getDynamicArchieInfo(){
     mydb.list("twapperlyzer/gender","archiveUser", {
         success: function(gender) {
           var total = gender.male + gender.female + gender.neutral;
-          var line = '<p>'+total+' Member, ♀'+Math.round(gender.female/(total/100))+'% ♂'+Math.round(gender.male/(total/100))+'% </p>';
+          var line = '<p>'+total+' Members, ♀'+Math.round(gender.female/(total/100))+'% ♂'+Math.round(gender.male/(total/100))+'% </p>';
           $("#dynamicArchieInfo-"+laid).append($(line).hide().fadeIn(1520));
         },
         error: function(status) {
@@ -1173,11 +1173,11 @@ function getDynamicArchieInfo(){
         success: function(data) {
           var line = "<p>";
           if(data.length === 1){
-            line +="All msg are in "+data[0].text
+            line +="All messages are in "+capitalize(data[0].text);
           }else if(data.length > 0)
-            line += "Most msg are in "+data[0].text;
+            line += "Most messages are in "+capitalize(data[0].text);
           if(data.length > 1)
-            line += " and some in "+data[1].text;
+            line += " and some in "+capitalize(data[1].text);
           line +="</p>";
           
           $("#dynamicArchieInfo-"+laid).append($(line).hide().fadeIn(1600));

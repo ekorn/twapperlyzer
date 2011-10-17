@@ -31,6 +31,8 @@
             <li><a href="#getArchiveList">getArchiveList</a></li>
             <li><a href="#analyseArchive">analyseArchive</a></li>
             <li><a href="#updateArchive">updateArchive</a></li>
+            <li><a href="#analyseArchive">analyseArchive</a></li>
+            <li><a href="#getMsgs">getMsgs  </a></li>
             <li><a href="#getMsgs">getMsgs  </a></li>
           </ul>
         </li>
@@ -141,6 +143,36 @@
   </div>
 </article>
 
+<article id="createOrUpdateArchive">
+  <h2>createOrUpdateArchive</h2><div>
+    <p>You call the function <a href="./createOrUpdateArchive">here</a></p>
+    <p>It is just a comfort function combining the functionalism of analyseArchive and updateArchive accept the same input parameter as analyseArchive.</p>
+    <h3>Mandatory Parameter</h3>
+    <ul>
+      <li><p><strong>param</strong>: <em>String</em>  ytkUrl The url auf a your twapperkeeper instance</p></li>
+      <li><p><strong>param</strong>: <em>Number</em>  l The limit of messages that should be analysed </p></li>
+      <li><p><strong>param</strong>: <em>Number</em>  id The id of the archive.</p></li>
+    </ul>
+    <h3>Optional Parameter</h3>
+    <ul>
+      <li><p><strong>param</strong>: <em>String</em>  nort With <code>on</code> passed the messages staring with RT will be will filtered</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  startDate The date from which on messages get analysed. The format is YYYY-MM-DD</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  endDate The date till which on messages get analysed. The format is YYYY-MM-DD</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  from_user Only the messages of that user will be analysed</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  text Only the messages containing this string will be analysed</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  o The Order in which the messages will be analysed. Valid parameters are either a (ascending)or d (descending)</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  lang The language filter. Valid parameter are to letter codes. like en,fr etc.</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  dbHost The host of a remote CouchDB instance</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  dbname The name of a remote CouchDB database</p></li>
+      <li><p><strong>param</strong>: <em>Number</em>  dbPort The port of a remote CouchDB instance, if not given port 5984 will be used</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  dbUser The name of a user for the remote CouchDB database</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  dbPw The password of a user for the remote CouchDB database</p></li>
+      <li><p><strong>param</strong>: <em>String</em>  dbSecure If the CouchDb is reachble over hhtps this has to set to true</p></li>
+      <li><p><strong>param</strong>: <em>Function</em> callback The callback function in case you want to use JSONP</p></li>
+    </ul>
+  </div>
+</article>
+
 <article id="getMsgs">
   <h2>getMsgs</h2>
   <div>
@@ -155,8 +187,17 @@
     </ul>
     <h3>Optional Parameter</h3>
     <ul>
-      <li><p><strong>param</strong>: <em>Number</em>  lastID The last id of the already transmitted messages. From this messages the next will start.</p></li>
+      <li><p><strong>param</strong>: <em>Number</em>  lastID The last id of the already transmitted messages. From this message the next will start.</p></li>
       <li><p><strong>param</strong>: <em>Function</em> callback The callback function in case you want to use JSONP</p></li>
+    </ul>
+  </div>
+</article>
+
+<article id="testAPI">
+  <h2>testAPI</h2>
+  <div>
+    <p>You call the function <a href="./testAPI">here</a></p>
+    <p>A simple test Function to check if the dataprovider is online</p>
   </div>
 </article>
 

@@ -276,6 +276,7 @@ function analyseAndUpdate(archiveInfo, currentDB, request, response){
   var ptime = new Date();
   analyser.analyseMesseges(archiveInfo, function(err, analysePart, callback){
     if (err) throw err;
+    //maybe change to all types
     if(analysePart.type === "user"){
       db.get(analysePart._id, function (err, doc){
         if (err) {
