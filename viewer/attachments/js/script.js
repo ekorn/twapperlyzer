@@ -371,6 +371,8 @@ function createPages(){
   twapperSession.templates.simpleAlert = Handlebars.compile( $("#simpleAlert").html() );
   
   twapperSession.templates.normalHeader = Handlebars.compile( $("#normalHeader").html() );
+  twapperSession.templates.overviewHeader = Handlebars.compile( $("#overviewHeader").html() );
+  
   twapperSession.templates.msgEntryTemplate = Handlebars.compile( $("#msgEntryTemplate").html() );
   twapperSession.templates.simpleContent = Handlebars.compile( $("#simpleContent").html() );
   twapperSession.templates.blockListContent = Handlebars.compile( $("#blockListContent").html() );
@@ -829,10 +831,12 @@ function setData(data,callback){
   
 
   //archiveGrowthPage
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
   var growthPage = {
     "pageId":"archiveGrowthPage-"+laid, 
+    "laid":laid,
     "pageHeader":"Growth", 
     "containerId":"archiveGrowthContainer-"+laid,
     "style":"height:"+Number($(window).height()) - Math.round(5*(Number($(window).height())/100))+"px;",
@@ -846,10 +850,12 @@ function setData(data,callback){
     queryHandler ("#archiveGrowthPage-"+laid);
   });
   // Map Page
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
   var mapPage = {
     "pageId":"mapPage-"+laid, 
+    "laid":laid,
     "pageHeader":"Map", 
     "containerId":"mapContainer-"+laid,
     "style" : ""
@@ -874,11 +880,13 @@ function setData(data,callback){
     
 
   //show Messages Page
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.listContent);
   Handlebars.registerPartial('footer', twapperSession.templates.buttonFooter);
   var showMsgsPage = {
     "pageId":"showMsgsPage-"+laid, 
     "pageHeader":"Messgaes", 
+    "laid":laid,
     "listId":"msgList-"+laid, 
     "footerButtonId":"moreMsgsButton-"+laid,
     "footerButtonText": "More Messages"
@@ -892,10 +900,12 @@ function setData(data,callback){
   });
   
   //archiveMentionsPage
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var mentionsPage = {
   "pageId":"archiveMentionsPage-"+laid, 
+  "laid":laid,
   "pageHeader":"Mentions in Archive"
   };
   $.mobile.pageContainer.append(twapperSession.templates.page(mentionsPage));
@@ -914,11 +924,13 @@ function setData(data,callback){
   });
   
   //archiveHashtagsPage
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
   "pageId":"archiveHashtagsPage-"+laid, 
-  "pageHeader":"Hastags in the Archive"
+  "laid":laid,
+  "pageHeader":"Hashtags in the Archive"
   };
   $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
 
@@ -937,11 +949,13 @@ function setData(data,callback){
   });
   
   //archiveKeywordsPage
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
   "pageId":"archiveKeywordsPage-"+laid, 
-  "pageHeader":"Hastags in the Archive"
+  "laid":laid,
+  "pageHeader":"Keywords in the Archive"
   };
   $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
 
@@ -960,10 +974,12 @@ function setData(data,callback){
   });
   
   //archiveMembersPage
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
   "pageId":"archiveMembersPage-"+laid, 
+  "laid":laid,
   "pageHeader":"Members in the Archive"
   };
   $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
@@ -982,10 +998,12 @@ function setData(data,callback){
   });
   
   //archiveRetweeterPage
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
   "pageId":"archiveRetweeterPage-"+laid, 
+  "laid":laid,
   "pageHeader":"Retweeter"
   };
   $.mobile.pageContainer.append(twapperSession.templates.page(hashtagsPage));
@@ -1005,10 +1023,12 @@ function setData(data,callback){
   
   
   //archiveLinksPage
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
   var linksPage = {
   "pageId":"archiveLinksPage-"+laid, 
+  "laid":laid,
   "pageHeader":"Links in the Archive", 
   "containerId":"archiveLinksContainer-"+laid,
   "style":"height:"+(Number($(document).height())-100)+"px;",
@@ -1029,11 +1049,13 @@ function setData(data,callback){
     }
   });
   //archiveQuestionsPage
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarQuestionsFooter);
   
   var questionsPage = {
   "pageId":"archiveQuestionsPage-"+laid, 
+  "laid":laid,
   "pageHeader":"Questions", 
   "containerId":"archiveQuestionsContainer-"+laid,
   "style":""
@@ -1282,11 +1304,11 @@ function setParams(page, name, laid){
     {
 
     if(_.isUndefined(twapperSession.archives[laid][name].total)){
-      console.log("Werte",$_GET.from, $_GET.to, twapperSession.archives[laid].timeStats.min, twapperSession.archives[laid].timeStats.max);
+      //console.log("Werte",$_GET.from, $_GET.to, twapperSession.archives[laid].timeStats.min, twapperSession.archives[laid].timeStats.max);
       getAggrigatedData(name,laid,twapperSession.archives[laid].timeStats.min,twapperSession.archives[laid].timeStats.max, function(err, res){
         if (err) console.log("Error while fetching "+name,err);
         if(res) {
-          console.log("total",res);
+          //console.log("total",res);
           twapperSession.archives[laid][name].total = res;
           setVis(twapperSession.archives[laid][name].total);
         }
@@ -1295,15 +1317,15 @@ function setParams(page, name, laid){
         setVis(twapperSession.archives[laid][name].total);
       }
   }else {//All other cases wont be cached
-  console.log("try to get some "+name, $_GET);
+  //console.log("try to get some "+name, $_GET);
     getAggrigatedData(name,laid,$_GET.from,$_GET.to, function(err, res){
       if (err) console.log("Error while fetching mentions",err);
-      console.log("It is ", res);
+      //console.log("It is ", res);
       if(res) {
         if(res !== {}){
           setVis(res);
         }else{
-          console.log("Show no Data msg");
+          //console.log("Show no Data msg");
           container.append("<div><h2>No Data for this Period</h2></div>");
         }
       }
@@ -1311,8 +1333,10 @@ function setParams(page, name, laid){
   }
   
   function setVis(data){
+    highlightCloudListButtons(page);
     if($_GET.vis === "cloud"){
        setCloud(data, container, name+"-"+laid);
+       
     }
     if($_GET.vis === "list"){
       setSimpleList( data, container, name+"-"+laid);
@@ -1454,7 +1478,7 @@ function changeView(page, vis){
             //unhighlight the buttons
       //The Period
       $($(navbars[2]).find("a")[2]).removeClass("ui-btn-active ui-btn-down-a");//
-console.log($($(navbars[2]).find("a")[2]));
+//console.log($($(navbars[2]).find("a")[2]));
       //highlight the buttons
       if($_GET.vis === "cloud"){
         $($(navbars[2]).find("a")[0]).addClass("ui-btn-down-a ui-btn-active");
@@ -1489,6 +1513,21 @@ console.log($($(navbars[2]).find("a")[2]));
     }else{
       document.location.hash = removeParameter(document.location.hash, "vis")+"&vis="+vis;
     }
+  }
+  
+}
+
+function highlightCloudListButtons(page){
+  var navbars = page.find( ":jqmData(role=navbar)" );
+  _.each($(navbars[2]).find("a"), function(button){
+    $(button).removeClass("ui-btn-down-a ui-btn-active");
+  });
+
+  //highlight the buttons
+  if($_GET.vis === "cloud"){
+    $($(navbars[2]).find("a")[0]).addClass("ui-btn-down-a ui-btn-active");
+  }else if($_GET.vis === "list"){
+    $($(navbars[2]).find("a")[1]).addClass("ui-btn-down-a ui-btn-active");
   }
   
 }
