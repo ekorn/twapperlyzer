@@ -1125,8 +1125,6 @@ mydb.view("twapperlyzer/timeStats", {
       if(data.rows.length>0){
         twapperSession.archives[laid].timeStats = data.rows[0].value;
         getDynamicArchieInfo();
-      }else{
-        setTimeout(updateTimeStats(laid, callback), 1000);
       }
     },
     "key":laid,
@@ -1773,9 +1771,14 @@ function createSelectedArchiveObject(array){
 }
 
 function getAggrigatedData(view,laid,sk,ek, callback){
+  //console.log("sk,ek",sk, ek );
   if(!_.isEmpty(ek)){ 
     ek = Number(ek);
   }
+  if(_.isUndefined(ek)){ //Hack to fix trage appearance of undefined
+    ek = {};
+  }
+  //console.log("Now sk,ek",sk, ek );
   mydb.list("twapperlyzer/aggrigate",view, {
       success: function(data) {
         callback(null,data);
