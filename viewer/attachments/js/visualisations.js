@@ -10,7 +10,7 @@ function addUrlChart(containerId, urls, showLimit) {
 			plotShadow: false
 		},
 		title: {
-			text: 'Links in the Archive'
+			text: urls.length +' Links '
 		},
 
 		tooltip: {

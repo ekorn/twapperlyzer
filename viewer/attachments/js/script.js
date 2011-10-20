@@ -831,7 +831,7 @@ function setData(data,callback){
   
 
   //archiveGrowthPage
-  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  ////Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
   var growthPage = {
@@ -850,7 +850,7 @@ function setData(data,callback){
     queryHandler ("#archiveGrowthPage-"+laid);
   });
   // Map Page
-  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  ////Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
   var mapPage = {
@@ -880,7 +880,7 @@ function setData(data,callback){
     
 
   //show Messages Page
-  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.listContent);
   Handlebars.registerPartial('footer', twapperSession.templates.buttonFooter);
   var showMsgsPage = {
@@ -900,7 +900,7 @@ function setData(data,callback){
   });
   
   //archiveMentionsPage
-  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var mentionsPage = {
@@ -924,7 +924,7 @@ function setData(data,callback){
   });
   
   //archiveHashtagsPage
-  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
@@ -949,7 +949,7 @@ function setData(data,callback){
   });
   
   //archiveKeywordsPage
-  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
@@ -974,7 +974,7 @@ function setData(data,callback){
   });
   
   //archiveMembersPage
-  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
@@ -998,7 +998,7 @@ function setData(data,callback){
   });
   
   //archiveRetweeterPage
-  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
@@ -1023,7 +1023,7 @@ function setData(data,callback){
   
   
   //archiveLinksPage
-  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
   var linksPage = {
@@ -1049,7 +1049,7 @@ function setData(data,callback){
     }
   });
   //archiveQuestionsPage
-  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarQuestionsFooter);
   
@@ -1309,6 +1309,7 @@ function setParams(page, name, laid){
           //console.log("total",res);
           twapperSession.archives[laid][name].total = res;
           setVis(twapperSession.archives[laid][name].total);
+          //page.find("h1").text(twapperSession.archives[laid][name].total.length +" "+ page.find("h1").text());
         }
       });
       }else{
