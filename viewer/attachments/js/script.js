@@ -385,6 +385,7 @@ function createPages(){
   twapperSession.templates.messageElement2 = Handlebars.compile( $("#messageElement2").html());
   
   twapperSession.templates.QuestionsWithAnswers = Handlebars.compile( $("#QuestionsWithAnswers").html());
+  twapperSession.templates.DiscussionList = Handlebars.compile( $("#DiscussionList").html());
   
   twapperSession.templates.simpleFooter = Handlebars.compile( $("#simpleFooter").html() );
   twapperSession.templates.buttonFooter = Handlebars.compile( $("#buttonFooter").html() );
@@ -795,7 +796,7 @@ function createArchivePage(requestedLaid, callback){
 
 function changeTargets(){
 
-  console.log("HUHU");
+  console.log("DEBUG");
 }
 
 function setData(data,callback){
@@ -831,7 +832,7 @@ function setData(data,callback){
   
 
   //archiveGrowthPage
-  ////Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
   var growthPage = {
@@ -850,7 +851,7 @@ function setData(data,callback){
     queryHandler ("#archiveGrowthPage-"+laid);
   });
   // Map Page
-  ////Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
   var mapPage = {
@@ -866,7 +867,7 @@ function setData(data,callback){
   $("#mapPage-"+laid).live('pagebeforeshow', function(){
     setDefaultGET();
     if(_.isUndefined(twapperSession.archives[laid].geo)){
-      getAggrigatedData("geo",laid,$_GET.from, $_GET.to,function(err, res){
+      getAggregatedData("geo",laid,$_GET.from, $_GET.to,function(err, res){
         if (err) console.log("Error while fetching GeoData",err);
         if(res) {
           twapperSession.archives[laid].geo = res
@@ -880,12 +881,12 @@ function setData(data,callback){
     
 
   //show Messages Page
-  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.listContent);
   Handlebars.registerPartial('footer', twapperSession.templates.buttonFooter);
   var showMsgsPage = {
     "pageId":"showMsgsPage-"+laid, 
-    "pageHeader":"Messgaes", 
+    "pageHeader":"Messages", 
     "laid":laid,
     "listId":"msgList-"+laid, 
     "footerButtonId":"moreMsgsButton-"+laid,
@@ -899,8 +900,37 @@ function setData(data,callback){
     loadMessagesFromServer();
   });
   
+  //archiveDiscussionsPage
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
+  Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
+  
+  var discussionsPage = {
+  "pageId":"archiveDiscussionsPage-"+laid, 
+  "laid":laid,
+  "pageHeader":"Discussions", 
+  "containerId":"archiveDiscussionsContainer-"+laid,
+  "style":""
+  };
+  $.mobile.pageContainer.append(twapperSession.templates.page(discussionsPage));
+  $("#archiveDiscussionsPage-"+laid).page();
+
+  $("#archiveDiscussionsPage-"+laid).live('pagebeforeshow', function(){
+    if(_.isUndefined(twapperSession.archives[laid].discussions)){
+      $.getJSON(showUrl("discussions",laid),{"type":"discussions"}, function(data) {//This has to be done once and will not be overwritten
+        twapperSession.archives[laid].discussions = data;
+        $("#archiveDiscussionsPage-"+laid).find( "h1" ).text(twapperSession.archives[laid].discussions.length + " Discussions");
+        _.each(twapperSession.archives[laid].discussions, function(discussion){
+          Handlebars.registerPartial('message', twapperSession.templates.messageElement2);
+          $("#archiveDiscussionsContainer-"+laid).append(twapperSession.templates.DiscussionList(discussion));
+        });
+
+      });
+    }
+  });
+  
   //archiveMentionsPage
-  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var mentionsPage = {
@@ -924,7 +954,7 @@ function setData(data,callback){
   });
   
   //archiveHashtagsPage
-  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
@@ -949,7 +979,7 @@ function setData(data,callback){
   });
   
   //archiveKeywordsPage
-  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
@@ -974,7 +1004,7 @@ function setData(data,callback){
   });
   
   //archiveMembersPage
-  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
@@ -998,7 +1028,7 @@ function setData(data,callback){
   });
   
   //archiveRetweeterPage
-  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarVisulasiationFooter);
   var hashtagsPage = {
@@ -1023,7 +1053,7 @@ function setData(data,callback){
   
   
   //archiveLinksPage
-  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.simpleFooter);
   var linksPage = {
@@ -1039,7 +1069,7 @@ function setData(data,callback){
   $("#archiveLinksPage-"+laid).live('pagebeforeshow', function(){
     setDefaultGET();
     if(_.isUndefined(twapperSession.archives[laid].urls)){
-      getAggrigatedData("urls",laid,$_GET.from, $_GET.to,function(err, res){
+      getAggregatedData("urls",laid,$_GET.from, $_GET.to,function(err, res){
         if (err) console.log("Error while fetching urls",err);
         if(res) {
           twapperSession.archives[laid].urls = res;
@@ -1049,7 +1079,7 @@ function setData(data,callback){
     }
   });
   //archiveQuestionsPage
-  //Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
+  Handlebars.registerPartial('header', twapperSession.templates.overviewHeader);
   Handlebars.registerPartial('content', twapperSession.templates.simpleContent);
   Handlebars.registerPartial('footer', twapperSession.templates.navbarQuestionsFooter);
   
@@ -1065,7 +1095,7 @@ function setData(data,callback){
 
   $("#archiveQuestionsPage-"+laid).live('pagebeforeshow', function(){
     if(_.isUndefined(twapperSession.archives[laid].questions)){
-      $.getJSON(showUrl(laid),{"type":"stats"}, function(data) {//This has to be done once and will not be overwritten
+      $.getJSON(showUrl("questions",laid),{"type":"stats"}, function(data) {//This has to be done once and will not be overwritten
         twapperSession.archives[laid].questions = {"stats":data};
         $("#archiveQuestionsPage-"+laid).find( "h1" ).text(twapperSession.archives[laid].questions.stats.total+" Questions");
         var footer = $("#archiveQuestionsPage-"+laid).find( ":jqmData(role=navbar) .ui-btn-text" );
@@ -1189,7 +1219,7 @@ function getDynamicArchieInfo(){
     
     //Language for header info
 
-    mydb.list("twapperlyzer/aggrigateMin2","language", {
+    mydb.list("twapperlyzer/aggregateMin2","language", {
         success: function(data) {
           var line = "<p>";
           if(data.length === 1){
@@ -1241,7 +1271,7 @@ function resetNavStore(navStore){
 
 function queryHandler (page){
   pageParts = page.split("-");
-  console.log("WHAT now", page, pageParts, $_GET);
+  //console.log("WHAT now", page, pageParts, $_GET);
   switch(pageParts[0]){
     case "#archiveGrowthPage" :
     
@@ -1303,13 +1333,13 @@ function setParams(page, name, laid){
 
     if(_.isUndefined(twapperSession.archives[laid][name].total)){
       //console.log("Werte",$_GET.from, $_GET.to, twapperSession.archives[laid].timeStats.min, twapperSession.archives[laid].timeStats.max);
-      getAggrigatedData(name,laid,twapperSession.archives[laid].timeStats.min,twapperSession.archives[laid].timeStats.max, function(err, res){
+      getAggregatedData(name,laid,twapperSession.archives[laid].timeStats.min,twapperSession.archives[laid].timeStats.max, function(err, res){
         if (err) console.log("Error while fetching "+name,err);
         if(res) {
           //console.log("total",res);
           twapperSession.archives[laid][name].total = res;
           setVis(twapperSession.archives[laid][name].total);
-          //page.find("h1").text(twapperSession.archives[laid][name].total.length +" "+ page.find("h1").text());
+          page.find("h1").text(twapperSession.archives[laid][name].total.length +" "+ page.find("h1").text());
         }
       });
       }else{
@@ -1317,7 +1347,7 @@ function setParams(page, name, laid){
       }
   }else {//All other cases wont be cached
   //console.log("try to get some "+name, $_GET);
-    getAggrigatedData(name,laid,$_GET.from,$_GET.to, function(err, res){
+    getAggregatedData(name,laid,$_GET.from,$_GET.to, function(err, res){
       if (err) console.log("Error while fetching mentions",err);
       //console.log("It is ", res);
       if(res) {
@@ -1547,7 +1577,7 @@ function setCloud(data, container, name){
       switch(type){
         case "goodAnswered" :
         if(_.isUndefined(twapperSession.archives[laid].questions.goodAnswered)){
-          $.getJSON(showUrl(laid),{"type":"goodAnswered"}, function(data) {
+          $.getJSON(showUrl("questions",laid),{"type":"goodAnswered"}, function(data) {
             twapperSession.archives[laid].questions.goodAnswered = data;
             setQuestions(twapperSession.archives[laid].questions.goodAnswered,laid);
           });
@@ -1557,7 +1587,7 @@ function setCloud(data, container, name){
         break;
         case "allAnswered" :
         if(_.isUndefined(twapperSession.archives[laid].questions.allAnswered)){
-          $.getJSON(showUrl(laid),{"type":"allAnswered"}, function(data) {
+          $.getJSON(showUrl("questions",laid),{"type":"allAnswered"}, function(data) {
             twapperSession.archives[laid].questions.allAnswered = data;
             setQuestions(twapperSession.archives[laid].questions.allAnswered,laid);
           });
@@ -1567,7 +1597,7 @@ function setCloud(data, container, name){
         break;
         case "unanswered" :
         if(_.isUndefined(twapperSession.archives[laid].questions.unanswered)){
-          $.getJSON(showUrl(laid),{"type":"unanswered"}, function(data) {
+          $.getJSON(showUrl("questions",aid),{"type":"unanswered"}, function(data) {
             twapperSession.archives[laid].questions.unanswered = data;
             setQuestions(twapperSession.archives[laid].questions.unanswered,laid);
           });
@@ -1577,7 +1607,7 @@ function setCloud(data, container, name){
         break;
         case "responder" :
         if(_.isUndefined(twapperSession.archives[laid].questions.responder)){
-          $.getJSON(showUrl(laid),{"type":"responder"}, function(data) {
+          $.getJSON(showUrl("questions",laid),{"type":"responder"}, function(data) {
             twapperSession.archives[laid].questions.responder = data;
             setSimpleList(twapperSession.archives[laid].questions.responder, $("#archiveQuestionsContainer-"+laid),"responder"+laid);
           });
@@ -1587,7 +1617,7 @@ function setCloud(data, container, name){
         break;
         case "questioner" :
         if(_.isUndefined(twapperSession.archives[laid].questions.questioner)){
-          $.getJSON(showUrl(laid),{"type":"questioner"}, function(data) {
+          $.getJSON(showUrl("questions",laid),{"type":"questioner"}, function(data) {
             twapperSession.archives[laid].questions.questioner = data;
             setSimpleList(twapperSession.archives[laid].questions.questioner, $("#archiveQuestionsContainer-"+laid) ,"questioner"+laid);
           });
@@ -1597,7 +1627,7 @@ function setCloud(data, container, name){
         break;
         default:
         if(_.isUndefined(twapperSession.archives[laid].questions.goodAnswered)){
-          $.getJSON(showUrl(laid),{"type":"goodAnswered"}, function(data) {
+          $.getJSON(showUrl("questions",laid),{"type":"goodAnswered"}, function(data) {
             twapperSession.archives[laid].questions.goodAnswered = data;
             setQuestions(twapperSession.archives[laid].questions.goodAnswered,laid);
           });
@@ -1633,9 +1663,14 @@ function setCloud(data, container, name){
  *
  */
 
-function showUrl(laid){
-  return mydb.uri+"/_design/twapperlyzer/_show/questions/"+laid+"-qu"
+function showUrl(type,laid){
+  var base = mydb.uri+"/_design/twapperlyzer/_show/";
+  if(type === "questions")
+    return base+"questions/"+laid+"-qu"
+  else if(type === "discussions")
+    return  base+"discussions/"+laid+"-di"
 }
+
 function getRTInfo(){
   var laid = getLaidFromPageName();
   var container = $("#archiveMembersContainer-"+laid);
@@ -1771,7 +1806,7 @@ function createSelectedArchiveObject(array){
   return res;
 }
 
-function getAggrigatedData(view,laid,sk,ek, callback){
+function getAggregatedData(view,laid,sk,ek, callback){
   //console.log("sk,ek",sk, ek );
   if(!_.isEmpty(ek)){ 
     ek = Number(ek);
@@ -1780,7 +1815,7 @@ function getAggrigatedData(view,laid,sk,ek, callback){
     ek = {};
   }
   //console.log("Now sk,ek",sk, ek );
-  mydb.list("twapperlyzer/aggrigate",view, {
+  mydb.list("twapperlyzer/aggregate",view, {
       success: function(data) {
         callback(null,data);
       },

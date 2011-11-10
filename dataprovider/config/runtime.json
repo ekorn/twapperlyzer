@@ -1,0 +1,8 @@
+{
+  "twapperlyzer": {},
+  "couchAppConfig": {
+    "thisdb": {
+      "dbname": "twapperlyzer23"
+    }
+  }
+}

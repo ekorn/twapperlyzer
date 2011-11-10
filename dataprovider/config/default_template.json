@@ -11,7 +11,9 @@
       "maxMessages": 500,
       "archivesListsCacheTime": 10000,
       "alchemyapi":"",
-      "sendTweets": true
+      "sendTweets": true,
+      "minDiscussionLength": 2
+      
     },
     "couchdb": {
       "host": "",
@@ -24,5 +26,18 @@
           }
       },
       "dbname": "twapperlyzer"
+    },
+    "couchAppConfig":{
+     "_id": "config",
+     "dataprovider": [
+         ""
+     ],
+     "ytkUrls": [
+         "http://imhotep.cs.upb.de/twapperkeeper"
+     ],
+     "adminName": "",
+     "adminEmail": "",
+     "type": "config",
+     "standardUrl": ""
     }
   }

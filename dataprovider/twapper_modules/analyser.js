@@ -37,13 +37,15 @@ function analyseMesseges(archiveInfo, callback){
   var languageStats = null;
   var questionsDoc = archiveInfo.questionsDoc;
   delete archiveInfo.questionsDoc;
+  var discussionsDoc = archiveInfo.discussionsDoc;
+  delete archiveInfo.discussionsDoc;
   var tmpUsernames =[]; //List of all Users of this Analyse 
   var alchemyapi = conf.twapperlyzer.alchemyapi !== "";
   var currentDate = 0;
   var hoursSaved = 0;
   var totalHours =0;
   var totalProgress = [];
-  var allDone = 4;
+  var allDone = 5;
   
   //Saving the augmentet archive-info
   var metaArchiveInfo = _.clone(archiveInfo);
@@ -222,6 +224,37 @@ function analyseMesseges(archiveInfo, callback){
 
       });
     }
+    
+    //Finding discussions 
+    if(!tmpMetaInfo.isReTweet){// A Retweet could not be part of a discussion
+      if(tmpMetaInfo.mentions.length > 0){ //Some one has to be mentioned for a discussion 
+        var isNew = true;
+        _.each(discussionsDoc.discussions, function(discusion){
+          if(_.include(discusion.mentionPool, message.from_user)){//The author could be part of this discussion
+          
+            var hasMentionedSomeOne = _.find(tmpMetaInfo.mentions, function(username){ //For every mention we look for a discussion member in the current discussion
+              return _.include(discusion.authorPool,username);
+            });
+            
+            if(!_.isUndefined(hasMentionedSomeOne)){
+              discusion.msgs.push({"text": message.text, "id": message.id, "time": message.time, "from_user": message.from_user,"profile_image_url": message.profile_image_url});
+              discusion.mentionPool = _.union(discusion.mentionPool, tmpMetaInfo.mentions);
+              discusion.authorPool = _.union(discusion.authorPool, message.from_user);
+              isNew = false;
+            }
+          }
+        });
+        if(isNew){// No started discussion found for this author
+          var discusion = { //So lets create a new one
+                            "msgs": [{"text": message.text, "id": message.id, "time": message.time, "from_user": message.from_user,"profile_image_url": message.profile_image_url}], 
+                            "mentionPool": tmpMetaInfo.mentions,
+                            "authorPool": [message.from_user]
+                          };
+          discussionsDoc.discussions.push(discusion);//and add it to the list.
+        }
+      }
+    }
+    
     //Async Part
     if(doAsync){
       //Sentiment
@@ -327,7 +360,27 @@ function analyseMesseges(archiveInfo, callback){
       analyseDone(metaArchiveInfo,callback);
     }
   });
+  
+  //filter the short discussions out
+  var longerDiscussions  = [];
+  _.each(discussionsDoc.discussions, function(discussion){
+    if(discussion.msgs.length >= conf.twapperlyzer.minDiscussionLength){
+      longerDiscussions.push(discussion);
+    }else{
+      //console.log("short discussion",discussion);
+    }
+  });
+  discussionsDoc.discussions = longerDiscussions;
+  
 
+  //Saving the augmentet discussionsDoc
+  callback(null, discussionsDoc, function(err, res){
+    totalProgress.push("discussions");
+    console.log("discussions saved. ", totalProgress);
+    if(totalProgress.length === allDone){
+      analyseDone(metaArchiveInfo,callback);
+    }
+  });
     
   if(!doAsync){
     //callback(null, msgByDate);

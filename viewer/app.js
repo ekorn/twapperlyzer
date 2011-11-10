@@ -17,8 +17,8 @@ ddoc =
 
 ddoc.lists = {};
 
-ddoc.lists.aggrigate = function(head, req){
-  function aggrigate(data) {
+ddoc.lists.aggregate = function(head, req){
+  function aggregate(data) {
       //log(data);
       var res = [];
       data.forEach( function (array) {
@@ -53,7 +53,7 @@ ddoc.lists.aggrigate = function(head, req){
       return -1;
     }
 
-    function aggrigateGeo(values) {
+    function aggregateGeo(values) {
       var res = [];
       values.forEach( function (arrays) {
         arrays.forEach( function (point) {
@@ -84,18 +84,18 @@ ddoc.lists.aggrigate = function(head, req){
   }
   if(docs.length>0){
     if(docs[0][0].lat !== void 0){
-      send(toJSON(aggrigateGeo(docs)));
+      send(toJSON(aggregateGeo(docs)));
     }
     else{
-      send(toJSON(aggrigate(docs).sort(aggSort)));
+      send(toJSON(aggregate(docs).sort(aggSort)));
     }
   }else{
     send(toJSON({}));
   }
 }
 
-ddoc.lists.aggrigateMin2 = function(head, req){
-  function aggrigate(data) {
+ddoc.lists.aggregateMin2 = function(head, req){
+  function aggregate(data) {
       //log(data);
       var res = [];
       data.forEach( function (array) {
@@ -127,7 +127,7 @@ ddoc.lists.aggrigateMin2 = function(head, req){
   while(row = getRow()) {
     docs.push(row.value);
   }
-  var agg = aggrigate(docs).sort(aggSort);
+  var agg = aggregate(docs).sort(aggSort);
   var res = [];
   for(var i=0; i<agg.length; i++){
     if(agg[i].weight === 1){
@@ -139,8 +139,8 @@ ddoc.lists.aggrigateMin2 = function(head, req){
   send(toJSON(res));
 }
 
-ddoc.lists.aggrigateLimit25 = function(head, req){
-  function aggrigate(data) {
+ddoc.lists.aggregateLimit25 = function(head, req){
+  function aggregate(data) {
       //log(data);
       var res = [];
       data.forEach( function (array) {
@@ -172,7 +172,7 @@ ddoc.lists.aggrigateLimit25 = function(head, req){
   while(row = getRow()) {
     docs.push(row.value);
   }
-  var agg = aggrigate(docs).sort(aggSort);
+  var agg = aggregate(docs).sort(aggSort);
   send(toJSON(agg.slice(0,25)));
 }
 
@@ -245,6 +245,21 @@ ddoc.lists.totalByDay = function(head, req){
     return res;
   }
   return toJSON(resArray);
+  
+}
+
+ddoc.lists.reach = function(head, req){
+  var row;
+  var docs = [];
+  while(row = getRow()) {
+    docs.push(row.value);
+  }
+  
+  var res = 0;
+  docs.forEach(function(user){
+    res += user.followers_count
+  });
+  return toJSON(res);
   
 }
 
@@ -468,6 +483,15 @@ ddoc.views.questions = {
   }
 }
 
+ddoc.views.discussions = {
+  map: function(doc) {
+    var meta = doc._id.split("-");
+    if(doc.type === "discussions"){ 
+        emit(meta[0]+"-"+meta[1], doc);
+    }
+  }
+}
+
 ddoc.shows = {};
 
 ddoc.shows.cache = function(head, req) {
@@ -485,6 +509,24 @@ ddoc.shows.cache = function(head, req) {
     , "body": "CACHE MANIFEST\n" + manifest
     }
   return r;
+}
+
+ddoc.shows.discussions = function(doc ,req) {
+  
+  if(req.query.type === "amount"){
+    return toJSON(doc.discussions.length);
+  }
+  if(req.query.type === "discussions"){
+    doc.discussions.forEach(function (discussion){
+      discussion.msgs.forEach(function(msg){
+        msg.text = msg.text.replace(/&quot;/g,'"');
+        
+      });
+    });
+    
+    return toJSON(doc.discussions);
+  }
+
 }
 
 ddoc.shows.questions = function(doc ,req) {

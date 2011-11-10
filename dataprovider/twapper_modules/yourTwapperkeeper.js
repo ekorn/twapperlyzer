@@ -153,11 +153,13 @@ function getArchiveList(ytkUrl, callback) {
 
     if (getFromNet) {
         helper.getJSON(ytkUrl + apiListArchives, function(jsondata) {
-            jsondata.data = jsondata.data[0];
-            callback(jsondata);
             if (jsondata.status == "ok") {
-                archivesListsCache[ytkUrl] = jsondata.data;
-                archivesListsCacheTime[ytkUrl] = new Date();
+              jsondata.data = jsondata.data[0];
+              callback(jsondata);
+              archivesListsCache[ytkUrl] = jsondata.data;
+              archivesListsCacheTime[ytkUrl] = new Date();
+            }else{
+              callback(jsondata);
             }
         });
     }

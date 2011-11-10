@@ -252,12 +252,18 @@
           <p>Browse the messages in reverse chronological order.</p>
         </a>
       </li>
-        
+      <li>
+        <a href="#archiveDiscussionsPage-{{archive._id}}">
+          <h3>Discussions</h3>
+          <p>Discussions in this community.</p>
+        </a>
+      </li>
+      
       <li data-role="list-divider"> Members </li>
       <li>
         <a href="#archiveMembersPage-{{archive._id}}?vis=cloud"> 
         <h3>Users</h3> 
-        <p>Show the users that form this community.</p>
+        <p>Show the users that form this community, ranked by their amount of messages.</p>
         </a>
       </li>
       <li>
@@ -308,6 +314,15 @@
   </div>
   {{#each answers}}
   <div style=" margin-left: 20px;">
+    {{> message}}
+  </div>
+  {{/each}}
+  <hr />
+</script>
+
+<script id="DiscussionList" type="text/html">
+  {{#each msgs}}
+  <div>
     {{> message}}
   </div>
   {{/each}}
@@ -443,7 +458,7 @@
 </script>
 
 <script id="navbarVisulasiationFooter"  type="text/html">
-  <div data-role="footer" >
+  <div data-role="footer" data-position="fixed">
     <div data-role="navbar" type="steper">
       <ul>
         <li><a href="#" onclick='step("#{{pageId}}", "previous")' ><=</a></li>

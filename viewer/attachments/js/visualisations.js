@@ -84,6 +84,7 @@ function setUpGeoMarkerForArchive(data, mapContainerId) {
 		popupAnchor: new L.Point(-3, -76)
 	});
 	var redMarker = new ColorMarker('css/images/marker-red.png');
+  var greenMarker = new ColorMarker('css/images/marker-green.png');
 	for (var i = 0 ; i < data.length; i++) {
 		var geoM = data[i];
 		// create a marker in the given location and add it to the map
@@ -96,7 +97,9 @@ function setUpGeoMarkerForArchive(data, mapContainerId) {
 			text +="<a href=\"http://twitter.com/#!/"+geoM.users[0].text+"/status/"+geoM.users[0].tweets[0]+"\" target=\"_blank\" >"+geoM.users[0].text+"</a>";
 			//console.log("Simple Marker please",_.values(geoM.users));
 		} else if(geoM.users.length == 1) {//More than one message from one place and person.
-			marker = new L.Marker(pos);
+			marker = new L.Marker(pos, {
+				icon:greenMarker
+			});
 			text +=" <a href=\"http://twitter.com/#!/"+geoM.users[0].text+"\" target=\"_blank\" style=\"font-size : 1."+Math.min(geoM.users[0].tweets.length,9)+"em;\">"+geoM.users[0].text+"</a> ";
 			//console.log("Simple Marker please",_.values(geoM.users));
 		} else {//More than one Person at one place, the amount of messages is irrelevant 
@@ -146,7 +149,7 @@ function setUpMap(mapContainerId) {
 
 	// create a CloudMade tile layer
 	var cloudmadeUrl = 'http://{s}.tile.cloudmade.com/d692a017c2bc4e45a59d57699d0e0ea7/997/256/{z}/{x}/{y}.png',
-	cloudmadeAttribution = 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
+	cloudmadeAttribution = 'Map data &copy; OpenStreetMap contributors, Imagery &copy; CloudMade',
 	cloudmade = new L.TileLayer(cloudmadeUrl, {
 		maxZoom: 18,
 		attribution: cloudmadeAttribution
