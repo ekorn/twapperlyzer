@@ -512,7 +512,7 @@ ddoc.shows.cache = function(head, req) {
 }
 
 ddoc.shows.discussions = function(doc ,req) {
-  var firstMsgs = 10;
+  var firstMsgs = 5;
   
   if(req.query.type === "amount"){
     return toJSON(doc.discussions.length);
