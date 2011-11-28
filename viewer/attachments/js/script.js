@@ -764,7 +764,7 @@ function createArchivePage(requestedLaid, callback){
             createDialog("Analysing this archive will take about "+jQuery.timeago(timeForAnalyse)+".<br> Twapperlyzer will send a tweet when it is done, do you want to be mentioned? Than enter your twitter username", function(username){
               if(username !== false ){
                 if(username.length >14){
-                  popErrorMessage("Your Username ist too lang you won't get mentioned: ", 2000);
+                  popErrorMessage("Your Username is too long you won't get mentioned: ", 2000);
                   username = "";
                 }
                 $.mobile.showPageLoadingMsg();
@@ -1270,7 +1270,9 @@ function resetNavStore(navStore){
 }
 
 function queryHandler (page){
+  
   pageParts = page.split("-");
+  
   //console.log("WHAT now", page, pageParts, $_GET);
   switch(pageParts[0]){
     case "#archiveGrowthPage" :
@@ -1321,6 +1323,7 @@ function queryHandler (page){
 }
 
 function setParams(page, name, laid){
+  $.mobile.showPageLoadingMsg();
   page = $(page);
   var container = getEmptyContainer(page);
   //Case the total for the archive is requested
@@ -1362,6 +1365,7 @@ function setParams(page, name, laid){
   }
   
   function setVis(data){
+    $.mobile.hidePageLoadingMsg();
     highlightCloudListButtons(page);
     if($_GET.vis === "cloud"){
        setCloud(data, container, name+"-"+laid);

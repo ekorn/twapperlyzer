@@ -85,6 +85,10 @@
 	twapperlyzerApi.analyseArchive = function (selectedArchive, dbconfig, dataprovider, mention, callback) {
     if(mention !== "")
       dbconfig.mention = mention;
+    else{
+      console.log("dbconfig.mention",dbconfig.mention);
+      delete dbconfig.mention;
+    }
       
 		twapperlizerCall(selectedArchive, dbconfig, dataprovider, "analyseArchive", callback);
 	};

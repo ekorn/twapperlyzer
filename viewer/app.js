@@ -512,6 +512,29 @@ ddoc.shows.cache = function(head, req) {
 }
 
 ddoc.shows.discussions = function(doc ,req) {
+  var firstMsgs = 10;
+  
+  if(req.query.type === "amount"){
+    return toJSON(doc.discussions.length);
+  }
+  if(req.query.type === "discussions"){
+    doc.discussions.forEach(function (discussion){
+      if(discussion.msgs.length >= firstMsgs){
+        discussion.msgs.length = firstMsgs;
+      }
+      
+      discussion.msgs.forEach(function(msg){
+        msg.text = msg.text.replace(/&quot;/g,'"');
+        
+      });
+    });
+    
+    return toJSON(doc.discussions);
+  }
+
+}
+
+ddoc.shows.allDiscussions = function(doc ,req) {
   
   if(req.query.type === "amount"){
     return toJSON(doc.discussions.length);
