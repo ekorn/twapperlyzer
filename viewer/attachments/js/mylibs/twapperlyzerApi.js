@@ -8,7 +8,7 @@
 		var jsonpTestAPI = $.ajax({
 			url: 'http://' + dataprovider + '/testAPI?callback=?',
 			dataType: "jsonp",
-			timeout: 1000
+			timeout: 5000
 		});
 
 		jsonpTestAPI.success(function (data) {
@@ -29,7 +29,7 @@
 			data: "ytkUrl=" + ytkUrl,
 			jsonp: 'callback',
 			url: 'http://' + dataprovider + '/getArchiveList?callback=?',
-			timeout: 1000
+			timeout: 5000
 		});
 
 		jsonpGetArchiveList.success(function (data) {
