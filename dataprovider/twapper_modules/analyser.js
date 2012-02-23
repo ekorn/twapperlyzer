@@ -407,11 +407,25 @@ function analyseMesseges(archiveInfo, callback){
         }
       });
     }else{
-      rest.get("http://data.tweetsentiments.com:8080/api/analyze.json?q="+encodeURIComponent(text+" food")).on('complete', function(data) {
-        callback(null, data.sentiment.name.toLowerCase());
-      });
+      //A hack to get rid of the 1 sec pause rule and the 50000 daily 
+      //so that the program dont break when the rate limit is exited 
+      //it just get a bid more neutral
+          (function(text, callback) {
+            setTimeout(function() {
+
+              rest.get("http://data.tweetsentiments.com:8080/api/analyze.json?q="+encodeURIComponent(text+" food")).on('complete', function(data) {
+                if(data.sentiment != void 0){
+                  callback(null, data.sentiment.name.toLowerCase());
+                }else{
+                  callback(null, "neutral");
+                }
+              });
+
+            }, 1100);
+            })(text, callback);
     }
   }
+  
   
   function saveTheHour(hour, save){
     hour.type = "hourData";

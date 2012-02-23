@@ -5,7 +5,7 @@ var helper = require('./twapper_modules/helper.js');
 
 var conn;
 var db;
-var laids =[];
+var laids =["29863de6315290d576d34e93d122c944-77"];
 helper.getDBConnectionFromConfig(conf.couchdb, function(error, database, connection){
   if(error == null){
     conn = connection;

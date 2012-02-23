@@ -1,5 +1,6 @@
 var _ = require('underscore')._,
     LanguageDetect = require('languagedetect'),
+    fs = require('fs'),
     lngDetector = new LanguageDetect(),
     glossary = require("glossary"),
     language = readAllStopwordFilesSync(__dirname+"/stopwords");
