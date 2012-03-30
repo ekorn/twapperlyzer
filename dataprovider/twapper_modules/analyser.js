@@ -264,11 +264,14 @@ function analyseMesseges(archiveInfo, callback){
       msgForCurrentDate.asyncCount++;
       getSentiment(message.text, tmpMetaInfo.detectedlanguage, function(err, data){
         msgForCurrentDate.asyncCount--;
-        
+        if(data !== null){
         if(data === "positive" ) msgForCurrentDate.sentiment.positive++;
         else if(data === "neutral" ) msgForCurrentDate.sentiment.neutral++;
         else if(data === "negative" ) msgForCurrentDate.sentiment.negative++;
-        
+        }else{
+        msgForCurrentDate.sentiment.neutral++;
+        console.log("Error from Sentiment", err);
+        }
         if(msgForCurrentDate.asyncCount == 0){
           delete msgForCurrentDate.asyncCount;
           saveTheHour(msgForCurrentDate, callback);
